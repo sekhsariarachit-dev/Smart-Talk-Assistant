@@ -1,0 +1,12 @@
+packages:
+  "framer-motion": "For smooth animations and transitions"
+  "uuid": "For generating unique private session user IDs"
+  "@types/uuid": "Types for uuid"
+  "react-textarea-autosize": "For auto-expanding chat input"
+  "date-fns": "For formatting message timestamps"
+  "clsx": "For conditional class names"
+  "tailwind-merge": "For merging tailwind classes safely"
+
+notes:
+  - Integrating with @workspace/api-client-react for generated TanStack Query hooks.
+  - Using Web Speech API for voice-to-text (SpeechRecognition) and text-to-speech (speechSynthesis).

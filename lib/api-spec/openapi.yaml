@@ -1,15 +1,18 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: AI Chatbot API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: chat
+    description: Chat operations
+  - name: files
+    description: File upload operations
 paths:
   /healthz:
     get:
@@ -24,6 +27,122 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /chat/sessions:
+    get:
+      operationId: listSessions
+      tags: [chat]
+      summary: List all chat sessions for a user
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChatSession"
+    post:
+      operationId: createSession
+      tags: [chat]
+      summary: Create a new chat session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSessionRequest"
+      responses:
+        "201":
+          description: Created session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatSession"
+  /chat/sessions/{sessionId}:
+    delete:
+      operationId: deleteSession
+      tags: [chat]
+      summary: Delete a chat session
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResponse"
+  /chat/messages:
+    get:
+      operationId: listMessages
+      tags: [chat]
+      summary: List messages for a session
+      parameters:
+        - name: sessionId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChatMessage"
+    post:
+      operationId: sendMessage
+      tags: [chat]
+      summary: Send a message and get AI reply
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendMessageRequest"
+      responses:
+        "200":
+          description: AI reply
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatMessage"
+  /files/upload:
+    post:
+      operationId: uploadFile
+      tags: [files]
+      summary: Upload a file and get its content extracted
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+              required:
+                - file
+      responses:
+        "200":
+          description: File info and extracted content
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadedFile"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +152,109 @@ components:
           type: string
       required:
         - status
-
+    ChatSession:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        title:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - userId
+        - title
+        - createdAt
+        - updatedAt
+    CreateSessionRequest:
+      type: object
+      properties:
+        userId:
+          type: string
+        title:
+          type: string
+      required:
+        - userId
+    SendMessageRequest:
+      type: object
+      properties:
+        sessionId:
+          type: string
+        userId:
+          type: string
+        content:
+          type: string
+        attachments:
+          type: array
+          items:
+            $ref: "#/components/schemas/MessageAttachment"
+      required:
+        - sessionId
+        - userId
+        - content
+    MessageAttachment:
+      type: object
+      properties:
+        url:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        extractedContent:
+          type: string
+      required:
+        - url
+        - name
+        - type
+    ChatMessage:
+      type: object
+      properties:
+        id:
+          type: string
+        sessionId:
+          type: string
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+        attachments:
+          type: array
+          items:
+            $ref: "#/components/schemas/MessageAttachment"
+        createdAt:
+          type: string
+      required:
+        - id
+        - sessionId
+        - role
+        - content
+        - createdAt
+    UploadedFile:
+      type: object
+      properties:
+        url:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        extractedContent:
+          type: string
+      required:
+        - url
+        - name
+        - type
+    DeleteResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+        - success
