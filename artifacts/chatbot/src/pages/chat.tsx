@@ -12,6 +12,7 @@ import {
   getListMessagesQueryKey 
 } from "@workspace/api-client-react";
 import { useAuth } from "@/hooks/use-auth";
+import { useTutorial } from "@/lib/tutorial-context";
 import { Sidebar } from "@/components/sidebar";
 import { ChatInput } from "@/components/chat-input";
 import { ChatMessageItem } from "@/components/chat-message-item";
@@ -19,6 +20,7 @@ import { TutorialOverlay } from "@/components/tutorial-overlay";
 
 export default function Chat() {
   const { userId, isReady } = useAuth();
+  const { currentStep, advance } = useTutorial();
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -52,6 +54,7 @@ export default function Chat() {
       });
       queryClient.invalidateQueries({ queryKey: getListSessionsQueryKey({ userId: userId! }) });
       setActiveSessionId(newSession.id);
+      if (currentStep === "new_chat") advance("new_chat");
       if (window.innerWidth < 768) setSidebarOpen(false);
     } catch (error) {
       console.error("Failed to create session", error);

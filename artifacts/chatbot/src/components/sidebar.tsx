@@ -97,7 +97,7 @@ export function Sidebar({
                 key={session.id}
                 onClick={() => onSelectSession(session.id)}
                 className={cn(
-                  "group relative w-full flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200",
+                  "relative w-full flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200",
                   activeSessionId === session.id 
                     ? "bg-white shadow-sm border border-gray-100 text-black" 
                     : "text-gray-600 hover:bg-gray-100/50 hover:text-black border border-transparent"
@@ -114,8 +114,8 @@ export function Sidebar({
                   onClick={(e) => handleDelete(e, session.id)}
                   disabled={deleteMutation.isPending}
                   className={cn(
-                    "opacity-0 group-hover:opacity-100 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all",
-                    currentStep === "delete_chat" && "opacity-100 ring-2 ring-red-500/50 text-red-500 bg-red-50"
+                    "p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all shrink-0",
+                    currentStep === "delete_chat" && "ring-2 ring-red-500/50 text-red-500 bg-red-50"
                   )}
                   title="Delete chat"
                 >
