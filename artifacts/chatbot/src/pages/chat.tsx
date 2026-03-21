@@ -143,7 +143,7 @@ export default function Chat() {
           )}
 
           {activeSessionId && messages.length === 0 && !loadingMessages && (
-             <div className="h-full flex flex-col items-center justify-center p-8 text-center opacity-50">
+             <div className="flex flex-col items-center pt-12 p-8 text-center opacity-50">
                <Sparkles size={48} className="mb-4" />
                <p className="text-lg font-medium">Send a message to start the conversation.</p>
              </div>
