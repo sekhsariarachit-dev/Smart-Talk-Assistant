@@ -52,11 +52,14 @@ export function TutorialOverlay() {
   return (
     <AnimatePresence>
       <motion.div
+        drag
+        dragMomentum={false}
+        dragElastic={0}
         initial={{ opacity: 0, y: -20, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
         className={cn(
-          "fixed z-50 p-5 max-w-sm w-full rounded-2xl glass-panel text-foreground shadow-lg border border-gray-200",
+          "fixed z-50 p-5 max-w-sm w-full rounded-2xl glass-panel text-foreground shadow-lg border border-gray-200 cursor-grab active:cursor-grabbing select-none",
           currentStep === "welcome"
             ? "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
             : "top-16 right-4 left-4 md:left-auto"

@@ -13,6 +13,7 @@ import {
 } from "@workspace/api-client-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useTutorial } from "@/lib/tutorial-context";
+import { useSpeechSynthesis } from "@/hooks/use-speech";
 import { Sidebar } from "@/components/sidebar";
 import { ChatInput } from "@/components/chat-input";
 import { ChatMessageItem } from "@/components/chat-message-item";
@@ -21,6 +22,7 @@ import { TutorialOverlay } from "@/components/tutorial-overlay";
 export default function Chat() {
   const { userId, isReady } = useAuth();
   const { currentStep, advance } = useTutorial();
+  const { speak } = useSpeechSynthesis();
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -73,10 +75,8 @@ export default function Chat() {
       queryClient.invalidateQueries({ queryKey: getListSessionsQueryKey({ userId: userId! }) });
     }
 
-    // Optimistic cache update could go here, but we'll rely on the mutation's speed for simplicity 
-    // and just show a loading state
     try {
-      await sendMessageMutation.mutateAsync({
+      const result = await sendMessageMutation.mutateAsync({
         data: {
           sessionId: currentSessionId,
           userId: userId!,
@@ -85,7 +85,11 @@ export default function Chat() {
         }
       });
       queryClient.invalidateQueries({ queryKey: getListMessagesQueryKey({ sessionId: currentSessionId }) });
-      queryClient.invalidateQueries({ queryKey: getListSessionsQueryKey({ userId: userId! }) }); // to update titles if needed
+      queryClient.invalidateQueries({ queryKey: getListSessionsQueryKey({ userId: userId! }) });
+
+      if (result?.content) {
+        speak(result.content);
+      }
     } catch (error) {
       console.error("Failed to send message", error);
     }
@@ -124,7 +128,7 @@ export default function Chat() {
         </header>
 
         <div className="flex-1 overflow-y-auto scroll-smooth" ref={scrollRef}>
-          {!activeSessionId && sessions.length === 0 && (
+          {!activeSessionId && (
             <div className="h-full flex flex-col items-center justify-center p-8 text-center animate-in fade-in zoom-in duration-500">
               <div className="w-20 h-20 bg-black text-white rounded-3xl flex items-center justify-center shadow-2xl mb-6">
                 <Sparkles size={40} />

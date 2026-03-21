@@ -1,9 +1,7 @@
 import React from "react";
 import { format } from "date-fns";
-import { Volume2, VolumeX, User, Sparkles, FileText } from "lucide-react";
+import { User, Sparkles, FileText } from "lucide-react";
 import { ChatMessage } from "@workspace/api-client-react";
-import { useSpeechSynthesis } from "@/hooks/use-speech";
-import { useTutorial } from "@/lib/tutorial-context";
 import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 
@@ -12,19 +10,7 @@ interface ChatMessageItemProps {
 }
 
 export function ChatMessageItem({ message }: ChatMessageItemProps) {
-  const { speak, stop, isSpeaking } = useSpeechSynthesis();
-  const { currentStep, advance } = useTutorial();
-
   const isUser = message.role === "user";
-
-  const handleSpeak = () => {
-    if (isSpeaking) {
-      stop();
-    } else {
-      speak(message.content);
-      if (currentStep === "hear_ai") advance("hear_ai");
-    }
-  };
 
   return (
     <div className={cn(
@@ -35,7 +21,6 @@ export function ChatMessageItem({ message }: ChatMessageItemProps) {
         "flex gap-4 max-w-4xl w-full",
         isUser ? "flex-row-reverse" : "flex-row"
       )}>
-        {/* Avatar */}
         <div className={cn(
           "w-10 h-10 rounded-full flex items-center justify-center shrink-0 shadow-sm border",
           isUser ? "bg-white border-gray-200" : "bg-black border-black text-white"
@@ -43,7 +28,6 @@ export function ChatMessageItem({ message }: ChatMessageItemProps) {
           {isUser ? <User size={20} className="text-gray-600" /> : <Sparkles size={20} />}
         </div>
 
-        {/* Content */}
         <div className={cn(
           "flex flex-col gap-2 min-w-0 flex-1",
           isUser ? "items-end" : "items-start"
@@ -60,7 +44,6 @@ export function ChatMessageItem({ message }: ChatMessageItemProps) {
             <ReactMarkdown>{message.content}</ReactMarkdown>
           </div>
 
-          {/* Attachments */}
           {message.attachments && message.attachments.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-2">
               {message.attachments.map((att, i) => (
@@ -79,32 +62,6 @@ export function ChatMessageItem({ message }: ChatMessageItemProps) {
                   )}
                 </div>
               ))}
-            </div>
-          )}
-
-          {/* TTS Button (AI only) */}
-          {!isUser && (
-            <div className="mt-2">
-              <button
-                onClick={handleSpeak}
-                className={cn(
-                  "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
-                  isSpeaking 
-                    ? "bg-black text-white shadow-md" 
-                    : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-black",
-                  currentStep === "hear_ai" && "ring-2 ring-black ring-offset-2"
-                )}
-              >
-                {isSpeaking ? (
-                  <>
-                    <VolumeX size={14} /> Stop speaking
-                  </>
-                ) : (
-                  <>
-                    <Volume2 size={14} /> Read aloud
-                  </>
-                )}
-              </button>
             </div>
           )}
         </div>
