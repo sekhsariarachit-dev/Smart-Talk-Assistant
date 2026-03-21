@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import TextareaAutosize from "react-textarea-autosize";
 import { Mic, Paperclip, Send, X, File as FileIcon, Image as ImageIcon, Video } from "lucide-react";
 import { useSpeechRecognition } from "@/hooks/use-speech";
@@ -23,12 +23,18 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const attachmentsRef = useRef<Attachment[]>([]);
+  attachmentsRef.current = attachments;
   
   const uploadFile = useUploadFile();
   const { currentStep, advance } = useTutorial();
 
   const handleSpeechResult = (text: string) => {
-    setContent((prev) => (prev ? prev + " " + text : text));
+    if (!text.trim()) return;
+    onSend(text.trim(), attachmentsRef.current);
+    setAttachments([]);
+    if (currentStep === "type_message") advance("type_message");
+    if (currentStep === "voice_input") advance("voice_input");
   };
 
   const { isListening, toggleListening, isSupported } = useSpeechRecognition(handleSpeechResult);
@@ -84,7 +90,6 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
 
   const handleMicClick = () => {
     toggleListening();
-    if (currentStep === "voice_input") advance("voice_input");
   };
 
   const getFileIcon = (type: string) => {
@@ -141,11 +146,11 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
           value={content}
           onChange={(e) => setContent(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Message AI..."
+          placeholder={isListening ? "Listening... speak now" : "Message AI..."}
           className="w-full resize-none bg-transparent border-0 focus:ring-0 p-3 text-base text-black placeholder:text-gray-400 max-h-[200px] overflow-y-auto scrollbar-hide focus:outline-none"
           minRows={1}
           maxRows={8}
-          disabled={disabled || isUploading}
+          disabled={disabled || isUploading || isListening}
         />
 
         {isSupported && (
@@ -159,7 +164,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
                 : "text-gray-400 hover:text-black hover:bg-gray-100",
               currentStep === "voice_input" && !isListening && "bg-black/5 text-black ring-2 ring-black"
             )}
-            title={isListening ? "Stop listening" : "Voice input"}
+            title={isListening ? "Stop and send" : "Voice input"}
           >
             <Mic size={20} />
           </button>

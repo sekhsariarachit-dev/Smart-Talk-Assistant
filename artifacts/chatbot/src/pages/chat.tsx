@@ -89,6 +89,7 @@ export default function Chat() {
 
       if (result?.content) {
         speak(result.content);
+        if (currentStep === "hear_ai") advance("hear_ai");
       }
     } catch (error) {
       console.error("Failed to send message", error);
