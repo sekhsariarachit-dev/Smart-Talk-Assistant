@@ -79,6 +79,7 @@
     "@ffmpeg/util": "^0.12.2",
     "@imgly/background-removal": "^1.7.0",
     "@types/uuid": "^11.0.0",
+    "onnxruntime-web": "^1.24.3",
     "react-markdown": "^10.1.0",
     "react-textarea-autosize": "^8.5.9",
     "uuid": "^13.0.0"
