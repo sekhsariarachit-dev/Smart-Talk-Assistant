@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Menu, Sparkles } from "lucide-react";
+import { Menu, Sparkles, NotebookPen, ListTodo } from "lucide-react";
 import { 
   useListSessions, 
   useCreateSession, 
@@ -18,6 +18,8 @@ import { Sidebar } from "@/components/sidebar";
 import { ChatInput } from "@/components/chat-input";
 import { ChatMessageItem } from "@/components/chat-message-item";
 import { TutorialOverlay } from "@/components/tutorial-overlay";
+import { NotebookPanel, ProjectPanel } from "@/components/session-panels";
+import { cn } from "@/lib/utils";
 
 export default function Chat() {
   const { userId, isReady } = useAuth();
@@ -25,6 +27,7 @@ export default function Chat() {
   const { speak } = useSpeechSynthesis();
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [rightPanel, setRightPanel] = useState<"notebook" | "project" | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
 
@@ -113,19 +116,38 @@ export default function Chat() {
         onToggle={() => setSidebarOpen(!sidebarOpen)}
       />
 
-      <main className="flex-1 flex flex-col relative w-full min-w-0">
-        <header className="h-14 border-b border-border bg-white/80 backdrop-blur-md flex items-center px-4 shrink-0 sticky top-0 z-10">
+      <main className="flex-1 flex relative w-full min-w-0 overflow-hidden">
+      <div className="flex-1 flex flex-col relative min-w-0">
+        <header className="h-14 border-b border-border bg-white/80 backdrop-blur-md flex items-center px-4 shrink-0 sticky top-0 z-10 gap-2">
           <button 
             onClick={() => setSidebarOpen(true)}
             className="md:hidden p-2 -ml-2 mr-2 text-gray-600 hover:text-black hover:bg-gray-100 rounded-lg"
           >
             <Menu size={20} />
           </button>
-          <div className="font-semibold text-lg flex items-center gap-2">
+          <div className="font-semibold text-lg flex items-center gap-2 flex-1 min-w-0 truncate">
             {activeSessionId 
               ? sessions.find(s => s.id === activeSessionId)?.title || "Chat"
               : "Welcome to ChatAI"}
           </div>
+          {activeSessionId && (
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                onClick={() => setRightPanel(p => p === "notebook" ? null : "notebook")}
+                title="Notebook"
+                className={cn("p-2 rounded-lg transition-colors", rightPanel === "notebook" ? "bg-black text-white" : "text-gray-500 hover:bg-gray-100 hover:text-black")}
+              >
+                <NotebookPen size={18} />
+              </button>
+              <button
+                onClick={() => setRightPanel(p => p === "project" ? null : "project")}
+                title="Project Tasks"
+                className={cn("p-2 rounded-lg transition-colors", rightPanel === "project" ? "bg-black text-white" : "text-gray-500 hover:bg-gray-100 hover:text-black")}
+              >
+                <ListTodo size={18} />
+              </button>
+            </div>
+          )}
         </header>
 
         <div className="flex-1 overflow-y-auto scroll-smooth" ref={scrollRef}>
@@ -187,6 +209,18 @@ export default function Chat() {
             AI can make mistakes. Consider verifying important information.
           </div>
         </div>
+      </div>
+
+      {rightPanel && activeSessionId && (
+        <div className="w-80 shrink-0 border-l border-gray-200 bg-white flex flex-col overflow-hidden">
+          {rightPanel === "notebook" && (
+            <NotebookPanel sessionId={activeSessionId} onClose={() => setRightPanel(null)} />
+          )}
+          {rightPanel === "project" && (
+            <ProjectPanel sessionId={activeSessionId} onClose={() => setRightPanel(null)} />
+          )}
+        </div>
+      )}
       </main>
     </div>
   );

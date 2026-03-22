@@ -5,6 +5,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { TutorialProvider } from "@/lib/tutorial-context";
 import NotFound from "@/pages/not-found";
 import Chat from "@/pages/chat";
+import PhotoTools from "@/pages/photo-tools";
+import VideoTools from "@/pages/video-tools";
+import Courses from "@/pages/courses";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -19,6 +22,9 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Chat} />
+      <Route path="/tools/photo" component={PhotoTools} />
+      <Route path="/tools/video" component={VideoTools} />
+      <Route path="/courses" component={Courses} />
       <Route component={NotFound} />
     </Switch>
   );
