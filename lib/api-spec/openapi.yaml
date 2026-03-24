@@ -189,6 +189,12 @@ components:
           type: string
         content:
           type: string
+        personality:
+          type: string
+          enum: [default, teacher, funny, strict, motivator, friend]
+        explainLevel:
+          type: string
+          enum: [child, student, expert]
         attachments:
           type: array
           items:

@@ -6,10 +6,14 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { MessageAttachment } from "./messageAttachment";
+import type { SendMessageRequestExplainLevel } from "./sendMessageRequestExplainLevel";
+import type { SendMessageRequestPersonality } from "./sendMessageRequestPersonality";
 
 export interface SendMessageRequest {
   sessionId: string;
   userId: string;
   content: string;
+  personality?: SendMessageRequestPersonality;
+  explainLevel?: SendMessageRequestExplainLevel;
   attachments?: MessageAttachment[];
 }

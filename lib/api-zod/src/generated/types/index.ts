@@ -16,5 +16,7 @@ export * from "./listMessagesParams";
 export * from "./listSessionsParams";
 export * from "./messageAttachment";
 export * from "./sendMessageRequest";
+export * from "./sendMessageRequestExplainLevel";
+export * from "./sendMessageRequestPersonality";
 export * from "./uploadedFile";
 export * from "./uploadFileBody";

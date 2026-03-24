@@ -22,6 +22,27 @@ export interface CreateSessionRequest {
   title?: string;
 }
 
+export type SendMessageRequestPersonality =
+  (typeof SendMessageRequestPersonality)[keyof typeof SendMessageRequestPersonality];
+
+export const SendMessageRequestPersonality = {
+  default: "default",
+  teacher: "teacher",
+  funny: "funny",
+  strict: "strict",
+  motivator: "motivator",
+  friend: "friend",
+} as const;
+
+export type SendMessageRequestExplainLevel =
+  (typeof SendMessageRequestExplainLevel)[keyof typeof SendMessageRequestExplainLevel];
+
+export const SendMessageRequestExplainLevel = {
+  child: "child",
+  student: "student",
+  expert: "expert",
+} as const;
+
 export interface MessageAttachment {
   url: string;
   name: string;
@@ -33,6 +54,8 @@ export interface SendMessageRequest {
   sessionId: string;
   userId: string;
   content: string;
+  personality?: SendMessageRequestPersonality;
+  explainLevel?: SendMessageRequestExplainLevel;
   attachments?: MessageAttachment[];
 }
 

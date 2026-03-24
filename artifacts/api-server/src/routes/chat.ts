@@ -2,12 +2,32 @@ import { Router, type IRouter } from "express";
 import { db, chatSessions, chatMessages } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { openai } from "@workspace/integrations-openai-ai-server";
-import multer from "multer";
-import path from "path";
-import fs from "fs/promises";
 
 const router: IRouter = Router();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
+
+const PERSONALITIES: Record<string, string> = {
+  default: "You are a helpful, knowledgeable AI assistant. You can answer questions on any topic, help with coding, writing, analysis, math, and more. Be helpful, clear, and concise.",
+  teacher: "You are a brilliant teacher. Explain everything clearly with examples and analogies. Use step-by-step structure, check understanding, and make learning engaging. Format complex topics with headers and bullet points.",
+  funny: "You are a witty, humorous AI assistant. Keep things light with jokes, puns, and humor while still being helpful and accurate. Start with something fun, then give the real answer.",
+  strict: "You are a strict, precise AI assistant. Be direct and concise — no fluff, no filler words. Give exact, to-the-point answers. If something is wrong, say so plainly.",
+  motivator: "You are an enthusiastic motivational AI assistant! Use encouraging language, celebrate questions, and respond with energy and positivity! Use emojis. Make the user feel capable and excited.",
+  friend: "You are a friendly, casual AI assistant. Talk like a close friend — informal, warm, supportive, and easy-going. Use simple language. Make the user feel comfortable.",
+};
+
+const EXPLAIN_LEVELS: Record<string, string> = {
+  child: "IMPORTANT: Explain this like the user is 5 years old. Use very simple words, fun analogies, and short sentences. Avoid all jargon.",
+  student: "IMPORTANT: Explain this at a student level — clear, educational, with examples. Not too technical but thorough.",
+  expert: "IMPORTANT: Explain this at an expert level — use technical terminology, go deep, assume advanced knowledge.",
+};
+
+const GENERATE_MODES: Record<string, string> = {
+  blog: "Generate a complete, well-structured blog post based on the following content. Include a catchy title, introduction, sections with headers, and a conclusion.",
+  script: "Generate a compelling video/presentation script based on the following content. Include scene descriptions, speaker notes, and engaging narration.",
+  notes: "Generate concise, well-organized study notes from the following content. Use bullet points, key terms in bold, and clear summaries.",
+  presentation: "Generate a presentation outline with slide titles and bullet points based on the following content. Include speaker notes for each slide.",
+  resume: "Create a professional resume based on the following information. Include sections for summary, experience, skills, and education.",
+  reel: "Generate a 30-60 second Reel/short video script based on the following. Include: hook (first 3 seconds), main content split into scenes, captions text, and voiceover lines. Make it punchy and engaging.",
+};
 
 router.get("/sessions", async (req, res) => {
   const userId = req.query.userId as string;
@@ -100,7 +120,7 @@ router.get("/messages", async (req, res) => {
 });
 
 router.post("/messages", async (req, res) => {
-  const { sessionId, userId, content, attachments } = req.body;
+  const { sessionId, userId, content, attachments, personality, explainLevel, generateMode } = req.body;
   if (!sessionId || !userId || !content) {
     res.status(400).json({ error: "sessionId, userId, and content are required" });
     return;
@@ -132,7 +152,11 @@ router.post("/messages", async (req, res) => {
         ).join("\n\n")
       : "";
 
-    const systemMessage = `You are a helpful, knowledgeable AI assistant. You can answer questions on any topic, help with coding, writing, analysis, math, and more. Be helpful, clear, and concise. If a user uploads a file, you can see its contents and help them with it.`;
+    const basePersonality = PERSONALITIES[personality] || PERSONALITIES.default;
+    const explainSuffix = explainLevel ? `\n\n${EXPLAIN_LEVELS[explainLevel]}` : "";
+    const generateSuffix = generateMode && GENERATE_MODES[generateMode] ? `\n\n${GENERATE_MODES[generateMode]}` : "";
+
+    const systemMessage = `${basePersonality}${explainSuffix}${generateSuffix}\n\nIf a user uploads a file, you can see its contents and help them with it.`;
 
     const chatHistory = prevMessages.slice(0, -1).map(m => ({
       role: m.role as "user" | "assistant",
