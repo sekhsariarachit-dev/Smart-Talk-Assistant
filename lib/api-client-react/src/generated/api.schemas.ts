@@ -32,6 +32,8 @@ export const SendMessageRequestPersonality = {
   strict: "strict",
   motivator: "motivator",
   friend: "friend",
+  photovideo: "photovideo",
+  teacher_course: "teacher_course",
 } as const;
 
 export type SendMessageRequestExplainLevel =

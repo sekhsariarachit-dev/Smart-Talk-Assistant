@@ -191,7 +191,7 @@ components:
           type: string
         personality:
           type: string
-          enum: [default, teacher, funny, strict, motivator, friend]
+          enum: [default, teacher, funny, strict, motivator, friend, photovideo, teacher_course]
         explainLevel:
           type: string
           enum: [child, student, expert]

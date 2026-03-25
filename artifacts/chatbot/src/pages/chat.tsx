@@ -20,7 +20,7 @@ import { TutorialOverlay } from "@/components/tutorial-overlay";
 import { NotebookPanel, ProjectPanel } from "@/components/session-panels";
 import { cn } from "@/lib/utils";
 
-export type Personality = "default" | "teacher" | "funny" | "strict" | "motivator" | "friend";
+export type Personality = "default" | "teacher" | "funny" | "strict" | "motivator" | "friend" | "photovideo" | "teacher_course";
 export type ExplainLevel = "child" | "student" | "expert" | null;
 
 const QUICK_PROMPTS = [

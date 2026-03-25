@@ -84,7 +84,16 @@ export const SendMessageBody = zod.object({
   userId: zod.string(),
   content: zod.string(),
   personality: zod
-    .enum(["default", "teacher", "funny", "strict", "motivator", "friend"])
+    .enum([
+      "default",
+      "teacher",
+      "funny",
+      "strict",
+      "motivator",
+      "friend",
+      "photovideo",
+      "teacher_course",
+    ])
     .optional(),
   explainLevel: zod.enum(["child", "student", "expert"]).optional(),
   attachments: zod

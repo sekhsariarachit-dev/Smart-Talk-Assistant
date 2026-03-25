@@ -16,6 +16,8 @@ const PERSONALITIES: { id: Personality; emoji: string; label: string }[] = [
   { id: "strict", emoji: "😤", label: "Strict" },
   { id: "motivator", emoji: "💪", label: "Hype" },
   { id: "friend", emoji: "🤝", label: "Friend" },
+  { id: "photovideo", emoji: "🎬", label: "Video Edit" },
+  { id: "teacher_course", emoji: "🎓", label: "Courses" },
 ];
 
 const EXPLAIN_LEVELS: { id: ExplainLevel; emoji: string; label: string }[] = [
