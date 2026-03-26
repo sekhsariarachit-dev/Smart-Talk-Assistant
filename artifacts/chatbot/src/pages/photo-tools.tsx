@@ -1,12 +1,11 @@
-import React, { useState, useRef, useCallback } from "react";
-import { Sparkles, Download, Upload, Wand2, ImageIcon, Loader2, X } from "lucide-react";
+import React, { useState, useRef } from "react";
+import { Download, Upload, Wand2, ImageIcon, Loader2, Send, Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Tab = "generate" | "edit" | "removebg";
 
 export default function PhotoTools() {
   const [tab, setTab] = useState<Tab>("generate");
-
   return (
     <div className="flex flex-col h-screen bg-white">
       <header className="h-14 border-b flex items-center px-4 gap-3 shrink-0">
@@ -15,15 +14,10 @@ export default function PhotoTools() {
       </header>
       <div className="flex border-b shrink-0">
         {(["generate", "edit", "removebg"] as Tab[]).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={cn(
-              "flex-1 py-3 text-sm font-medium transition-colors border-b-2",
-              tab === t ? "border-black text-black" : "border-transparent text-gray-500 hover:text-black"
-            )}
-          >
-            {t === "generate" ? "Generate Image" : t === "edit" ? "Edit Photo" : "Remove Background"}
+          <button key={t} onClick={() => setTab(t)}
+            className={cn("flex-1 py-3 text-xs font-medium transition-colors border-b-2",
+              tab === t ? "border-black text-black" : "border-transparent text-gray-500 hover:text-black")}>
+            {t === "generate" ? "Generate" : t === "edit" ? "AI Edit" : "Remove BG"}
           </button>
         ))}
       </div>
@@ -47,49 +41,32 @@ function GenerateTab() {
     setLoading(true); setError(""); setImageUrl(null);
     try {
       const res = await fetch("/api/tools/generate-image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt }),
       });
-      if (!res.ok) throw new Error("Failed to generate image");
+      if (!res.ok) throw new Error("Failed");
       const data = await res.json();
       setImageUrl(data.url);
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
+    } catch { setError("Could not generate image. Please try again."); }
+    finally { setLoading(false); }
   };
 
   return (
-    <div className="p-6 max-w-xl mx-auto space-y-6">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Describe the image you want</label>
-        <textarea
-          value={prompt}
-          onChange={e => setPrompt(e.target.value)}
-          placeholder="A futuristic city skyline at night with neon lights..."
-          rows={4}
-          className="w-full border-2 border-gray-200 rounded-xl p-3 text-sm focus:border-black focus:outline-none resize-none"
-        />
-      </div>
-      <button
-        onClick={generate}
-        disabled={loading || !prompt.trim()}
-        className="w-full py-3 bg-black text-white font-semibold rounded-xl hover:bg-gray-900 disabled:opacity-40 flex items-center justify-center gap-2 transition-all"
-      >
-        {loading ? <><Loader2 size={18} className="animate-spin" /> Generating...</> : <><Wand2 size={18} /> Generate Image</>}
+    <div className="p-4 max-w-xl mx-auto space-y-4">
+      <textarea value={prompt} onChange={e => setPrompt(e.target.value)}
+        placeholder="Describe the image you want... e.g. 'A sunset over mountains, photorealistic, 4K'"
+        rows={4} className="w-full border-2 border-gray-200 rounded-xl p-3 text-sm focus:border-black focus:outline-none resize-none" />
+      <button onClick={generate} disabled={loading || !prompt.trim()}
+        className="w-full py-3 bg-black text-white font-semibold rounded-xl disabled:opacity-40 flex items-center justify-center gap-2">
+        {loading ? <><Loader2 size={18} className="animate-spin" />Generating...</> : <><Wand2 size={18} />Generate Image</>}
       </button>
       {error && <p className="text-red-500 text-sm">{error}</p>}
       {imageUrl && (
         <div className="space-y-3">
           <img src={imageUrl} alt="Generated" className="w-full rounded-2xl border shadow-lg" />
-          <a
-            href={imageUrl}
-            download="generated-image.png"
-            className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-black text-black font-semibold rounded-xl hover:bg-gray-50 transition-all"
-          >
-            <Download size={16} /> Download
+          <a href={imageUrl} download="generated.png"
+            className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-black text-black font-semibold rounded-xl hover:bg-gray-50">
+            <Download size={16} />Download
           </a>
         </div>
       )}
@@ -97,85 +74,215 @@ function GenerateTab() {
   );
 }
 
-function EditTab() {
-  const [original, setOriginal] = useState<string | null>(null);
-  const [edited, setEdited] = useState<string | null>(null);
-  const [brightness, setBrightness] = useState(100);
-  const [contrast, setContrast] = useState(100);
-  const [saturation, setSaturation] = useState(100);
-  const [rotation, setRotation] = useState(0);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const imgRef = useRef<HTMLImageElement | null>(null);
+async function compressImage(file: File, maxDim = 1024): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(maxDim / img.width, maxDim / img.height, 1);
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext("2d")?.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(blob => {
+        if (blob) resolve(new File([blob], "image.png", { type: "image/png" }));
+        else reject(new Error("compress failed"));
+      }, "image/png", 0.92);
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
 
-  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+function EditTab() {
+  const [mainImg, setMainImg] = useState<string | null>(null);
+  const [overlayImg, setOverlayImg] = useState<string | null>(null);
+  const [overlayFile, setOverlayFile] = useState<File | null>(null);
+  const [mainFile, setMainFile] = useState<File | null>(null);
+  const [result, setResult] = useState<string | null>(null);
+  const [instruction, setInstruction] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState("");
+  const mainImgRef = useRef<HTMLImageElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const handleMainUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setMainFile(file);
     const url = URL.createObjectURL(file);
-    setOriginal(url);
-    setEdited(null);
+    setMainImg(url);
+    setResult(null); setStatus("");
     const img = new Image();
-    img.onload = () => { imgRef.current = img; applyEdits(img, 100, 100, 100, 0); };
+    img.onload = () => { mainImgRef.current = img; };
     img.src = url;
   };
 
-  const applyEdits = useCallback((img: HTMLImageElement, br: number, co: number, sa: number, rot: number) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rad = (rot * Math.PI) / 180;
-    const sin = Math.abs(Math.sin(rad));
-    const cos = Math.abs(Math.cos(rad));
-    canvas.width = img.width * cos + img.height * sin;
-    canvas.height = img.width * sin + img.height * cos;
-    const ctx = canvas.getContext("2d")!;
-    ctx.filter = `brightness(${br}%) contrast(${co}%) saturate(${sa}%)`;
-    ctx.translate(canvas.width / 2, canvas.height / 2);
-    ctx.rotate(rad);
-    ctx.drawImage(img, -img.width / 2, -img.height / 2);
-    setEdited(canvas.toDataURL("image/png"));
-  }, []);
-
-  const apply = () => {
-    if (imgRef.current) applyEdits(imgRef.current, brightness, contrast, saturation, rotation);
+  const handleOverlayUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setOverlayFile(file);
+    setOverlayImg(URL.createObjectURL(file));
   };
 
+  const applyEdit = async () => {
+    if (!mainImgRef.current || !instruction.trim()) return;
+    const lower = instruction.toLowerCase();
+    setLoading(true); setResult(null); setStatus("Processing...");
+    try {
+      if (lower.includes("background") || lower.includes("remove bg") || lower.includes("transparent")) {
+        setStatus("Loading AI model (this may take 30s)...");
+        const file = mainFile!;
+        const compressed = file.size > 1.5 * 1024 * 1024 ? await compressImage(file) : file;
+        const { removeBackground } = await import("@imgly/background-removal");
+        const blob = await removeBackground(compressed, {
+          publicPath: "https://unpkg.com/@imgly/background-removal@1.5.7/dist/",
+          debug: false,
+        });
+        setResult(URL.createObjectURL(blob));
+        setStatus("Background removed! ✅");
+      } else if ((lower.includes("add") || lower.includes("put") || lower.includes("place")) && overlayFile) {
+        const canvas = canvasRef.current!;
+        const main = mainImgRef.current;
+        canvas.width = main.naturalWidth;
+        canvas.height = main.naturalHeight;
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(main, 0, 0);
+        const overlay = new Image();
+        overlay.onload = () => {
+          const scale = Math.min(0.3, (main.naturalWidth * 0.3) / overlay.naturalWidth);
+          const w = overlay.naturalWidth * scale;
+          const h = overlay.naturalHeight * scale;
+          let x = 0, y = 0;
+          if (lower.includes("top-right") || lower.includes("top right")) { x = main.naturalWidth - w - 10; y = 10; }
+          else if (lower.includes("bottom-left") || lower.includes("bottom left")) { x = 10; y = main.naturalHeight - h - 10; }
+          else if (lower.includes("bottom-right") || lower.includes("bottom right")) { x = main.naturalWidth - w - 10; y = main.naturalHeight - h - 10; }
+          else if (lower.includes("center") || lower.includes("middle")) { x = (main.naturalWidth - w) / 2; y = (main.naturalHeight - h) / 2; }
+          else { x = 10; y = 10; }
+          ctx.drawImage(overlay, x, y, w, h);
+          setResult(canvas.toDataURL("image/png"));
+          setStatus("Element added! ✅");
+        };
+        overlay.src = overlayImg!;
+      } else {
+        const canvas = canvasRef.current!;
+        const img = mainImgRef.current;
+        let br = 100, co = 100, sa = 100, rotation = 0;
+        let flipX = false, flipY = false;
+
+        if (lower.includes("bright") || lower.includes("lighter") || lower.includes("light")) br = 145;
+        if (lower.includes("dark") || lower.includes("darker")) br = 65;
+        if (lower.includes("contrast")) co = 160;
+        if (lower.includes("vivid") || lower.includes("saturate") || lower.includes("colorful")) sa = 185;
+        if (lower.includes("black and white") || lower.includes("bw") || lower.includes("grayscale") || lower.includes("monochrome")) sa = 0;
+        if (lower.includes("rotate 90") || lower.includes("rotate right") || lower.includes("clockwise")) rotation = 90;
+        if (lower.includes("rotate 180") || lower.includes("upside down")) rotation = 180;
+        if (lower.includes("rotate left") || lower.includes("counter")) rotation = -90;
+        if (lower.includes("flip horizontal") || lower.includes("mirror")) flipX = true;
+        if (lower.includes("flip vertical")) flipY = true;
+        if (lower.includes("sepia") || lower.includes("vintage") || lower.includes("warm")) { br = 110; co = 115; sa = 60; }
+
+        const rad = (rotation * Math.PI) / 180;
+        const sin = Math.abs(Math.sin(rad));
+        const cos = Math.abs(Math.cos(rad));
+        canvas.width = img.naturalWidth * cos + img.naturalHeight * sin;
+        canvas.height = img.naturalWidth * sin + img.naturalHeight * cos;
+        const ctx = canvas.getContext("2d")!;
+        ctx.save();
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        if (flipX) ctx.scale(-1, 1);
+        if (flipY) ctx.scale(1, -1);
+        ctx.rotate(rad);
+        ctx.filter = `brightness(${br}%) contrast(${co}%) saturate(${sa}%)`;
+        ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
+        ctx.restore();
+        setResult(canvas.toDataURL("image/png"));
+        setStatus("Edit applied! ✅");
+      }
+    } catch (e: any) {
+      setStatus("Could not process. Try: 'remove background', 'make brighter', 'rotate 90°', 'black and white', 'add overlay top-right'");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const SUGGESTIONS = ["Remove background", "Make it brighter", "Black and white", "Rotate 90°", "Make darker", "Add saturated colors", "Vintage/sepia look", "Mirror flip"];
+
   return (
-    <div className="p-6 max-w-xl mx-auto space-y-5">
-      <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-2xl p-8 cursor-pointer hover:border-black transition-colors">
-        <Upload size={28} className="text-gray-400 mb-2" />
-        <span className="text-sm text-gray-500 font-medium">Upload a photo to edit</span>
-        <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+    <div className="p-4 max-w-xl mx-auto space-y-4">
+      <div className="bg-blue-50 rounded-xl p-3 text-xs text-blue-700 font-medium">
+        📝 Upload a photo and type what you want to do — e.g. "remove background", "make brighter", "rotate 90°", "black and white"
+      </div>
+
+      <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-2xl p-6 cursor-pointer hover:border-black transition-colors">
+        {mainImg
+          ? <img src={mainImg} className="max-h-48 rounded-xl object-contain" />
+          : <><Upload size={28} className="text-gray-400 mb-2" /><span className="text-sm text-gray-500 font-medium">Upload any photo</span><span className="text-xs text-gray-400">(JPG, PNG, WEBP, HEIC, etc.)</span></>
+        }
+        <input type="file" accept="image/*" className="hidden" onChange={handleMainUpload} />
       </label>
-      {original && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-3 gap-4">
-            {[
-              { label: "Brightness", value: brightness, set: setBrightness, min: 0, max: 200 },
-              { label: "Contrast", value: contrast, set: setContrast, min: 0, max: 200 },
-              { label: "Saturation", value: saturation, set: setSaturation, min: 0, max: 200 },
-            ].map(({ label, value, set, min, max }) => (
-              <div key={label}>
-                <label className="block text-xs font-medium text-gray-600 mb-1">{label} {value}%</label>
-                <input type="range" min={min} max={max} value={value} onChange={e => set(Number(e.target.value))} className="w-full" />
-              </div>
+
+      {mainImg && (
+        <>
+          <div className="border border-dashed border-gray-200 rounded-xl p-3">
+            <p className="text-xs font-semibold text-gray-500 mb-2">➕ Optionally upload an element to add to the photo:</p>
+            <label className="flex items-center gap-2 cursor-pointer">
+              {overlayImg
+                ? <><img src={overlayImg} className="h-10 w-10 rounded-lg object-cover border" /><span className="text-xs text-gray-600">Element uploaded</span><button onClick={() => { setOverlayImg(null); setOverlayFile(null); }} className="ml-auto"><X size={14} className="text-gray-400" /></button></>
+                : <><Plus size={16} className="text-gray-400" /><span className="text-sm text-gray-500">Upload element to add (logo, sticker, text image...)</span></>
+              }
+              <input type="file" accept="image/*" className="hidden" onChange={handleOverlayUpload} />
+            </label>
+          </div>
+
+          <div className="flex flex-wrap gap-1.5">
+            {SUGGESTIONS.map(s => (
+              <button key={s} onClick={() => setInstruction(s)}
+                className="px-2.5 py-1 bg-gray-100 hover:bg-black hover:text-white text-gray-700 text-xs rounded-full transition-all font-medium">
+                {s}
+              </button>
             ))}
           </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Rotation {rotation}°</label>
-            <input type="range" min={-180} max={180} value={rotation} onChange={e => setRotation(Number(e.target.value))} className="w-full" />
+
+          <div className="flex gap-2">
+            <input
+              value={instruction}
+              onChange={e => setInstruction(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && applyEdit()}
+              placeholder="Type what you want to do..."
+              className="flex-1 border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:border-black focus:outline-none"
+            />
+            <button onClick={applyEdit} disabled={loading || !instruction.trim()}
+              className="px-4 py-2.5 bg-black text-white rounded-xl disabled:opacity-40 flex items-center gap-1.5 font-medium">
+              {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+            </button>
           </div>
-          <button onClick={apply} className="w-full py-2.5 bg-black text-white font-semibold rounded-xl hover:bg-gray-900 transition-all">
-            Apply Edits
-          </button>
-          <canvas ref={canvasRef} className="hidden" />
-          {edited && (
-            <>
-              <img src={edited} alt="Edited" className="w-full rounded-2xl border shadow" />
-              <a href={edited} download="edited-photo.png" className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-black text-black font-semibold rounded-xl hover:bg-gray-50 transition-all">
-                <Download size={16} /> Download
-              </a>
-            </>
+
+          {status && (
+            <p className={cn("text-sm font-medium", status.includes("✅") ? "text-green-600" : status.includes("Could not") ? "text-red-500" : "text-blue-600")}>
+              {loading && <Loader2 size={14} className="inline animate-spin mr-1" />}{status}
+            </p>
           )}
-        </div>
+
+          {result && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div><p className="text-xs font-medium text-gray-500 mb-1">Original</p><img src={mainImg} className="w-full rounded-xl border object-cover h-32" /></div>
+                <div><p className="text-xs font-medium text-gray-500 mb-1">Result</p>
+                  <div className="w-full rounded-xl border h-32 overflow-hidden" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Crect width='8' height='8' fill='%23e5e7eb'/%3E%3Crect x='8' y='8' width='8' height='8' fill='%23e5e7eb'/%3E%3C/svg%3E\")" }}>
+                    <img src={result} className="w-full h-full object-cover" />
+                  </div>
+                </div>
+              </div>
+              <a href={result} download="edited-photo.png"
+                className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-black text-black font-semibold rounded-xl hover:bg-gray-50">
+                <Download size={16} />Download Result
+              </a>
+            </div>
+          )}
+          <canvas ref={canvasRef} className="hidden" />
+        </>
       )}
     </div>
   );
@@ -185,64 +292,82 @@ function RemoveBgTab() {
   const [original, setOriginal] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [status, setStatus] = useState("");
+  const [fileCache, setFileCache] = useState<File | null>(null);
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setResult(null); setError("");
-    const url = URL.createObjectURL(file);
-    setOriginal(url);
+  const process = async (file: File) => {
+    setResult(null);
     setLoading(true);
+    setStatus("Compressing image...");
     try {
+      const compressed = file.size > 1.5 * 1024 * 1024 ? await compressImage(file) : file;
+      setStatus("Loading AI model (~30s first time)...");
       const { removeBackground } = await import("@imgly/background-removal");
-      const blob = await removeBackground(file, {
-        publicPath: "https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.7/dist/",
+      setStatus("Removing background...");
+      const blob = await removeBackground(compressed, {
+        publicPath: "https://unpkg.com/@imgly/background-removal@1.5.7/dist/",
+        debug: false,
       });
-      const resultUrl = URL.createObjectURL(blob);
-      setResult(resultUrl);
-    } catch (e: any) {
-      setError("Background removal failed. Please try a different image.");
+      setResult(URL.createObjectURL(blob));
+      setStatus("Done! ✅");
+    } catch {
+      setStatus("error");
     } finally {
       setLoading(false);
     }
   };
 
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFileCache(file);
+    setOriginal(URL.createObjectURL(file));
+    await process(file);
+  };
+
+  const retry = async () => {
+    if (fileCache) await process(fileCache);
+  };
+
   return (
-    <div className="p-6 max-w-xl mx-auto space-y-5">
-      <div className="text-sm text-gray-600 bg-gray-50 rounded-xl p-4">
-        Upload a photo and the AI will automatically remove the background, leaving a transparent PNG.
+    <div className="p-4 max-w-xl mx-auto space-y-4">
+      <div className="text-sm text-gray-600 bg-gray-50 rounded-xl p-3">
+        Upload <strong>any photo</strong> (JPG, PNG, WEBP, HEIC…) — AI removes the background and gives you a transparent PNG. Works best on clear subjects with contrasting backgrounds.
       </div>
-      <label className={cn(
-        "flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-8 transition-colors",
-        loading ? "border-gray-200 cursor-not-allowed" : "border-gray-300 cursor-pointer hover:border-black"
-      )}>
-        {loading ? (
-          <><Loader2 size={28} className="animate-spin text-gray-400 mb-2" /><span className="text-sm text-gray-500">Removing background...</span></>
-        ) : (
-          <><Upload size={28} className="text-gray-400 mb-2" /><span className="text-sm text-gray-500 font-medium">Upload photo to remove background</span></>
-        )}
+
+      <label className={cn("flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-8 transition-colors",
+        loading ? "border-gray-200 cursor-not-allowed" : "border-gray-300 cursor-pointer hover:border-black")}>
+        {loading
+          ? <><Loader2 size={28} className="animate-spin text-black mb-2" /><span className="text-sm font-medium">{status}</span><span className="text-xs text-gray-400 mt-1">Please wait, don't close the page</span></>
+          : <><Upload size={28} className="text-gray-400 mb-2" /><span className="text-sm text-gray-500 font-medium">Upload any photo</span><span className="text-xs text-gray-400">Tap to choose from your gallery</span></>
+        }
         <input type="file" accept="image/*" className="hidden" onChange={handleUpload} disabled={loading} />
       </label>
-      {error && <p className="text-red-500 text-sm">{error}</p>}
-      <canvas ref={canvasRef} className="hidden" />
+
+      {status === "error" && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 space-y-2">
+          <p className="text-red-600 text-sm font-semibold">Background removal failed</p>
+          <p className="text-red-500 text-xs">This can happen with very large images or on slow connections. Try with a smaller photo.</p>
+          <button onClick={retry} className="w-full py-2 bg-red-500 text-white font-semibold rounded-xl text-sm hover:bg-red-600">
+            Try Again
+          </button>
+        </div>
+      )}
+
       {original && result && (
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
+            <div><p className="text-xs font-medium text-gray-500 mb-1">Original</p><img src={original} className="w-full rounded-xl border" /></div>
             <div>
-              <p className="text-xs text-gray-500 font-medium mb-1">Original</p>
-              <img src={original} alt="Original" className="w-full rounded-xl border" />
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 font-medium mb-1">Result</p>
+              <p className="text-xs font-medium text-gray-500 mb-1">No Background</p>
               <div className="w-full rounded-xl border overflow-hidden" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Crect width='8' height='8' fill='%23e5e7eb'/%3E%3Crect x='8' y='8' width='8' height='8' fill='%23e5e7eb'/%3E%3C/svg%3E\")" }}>
-                <img src={result} alt="No background" className="w-full" />
+                <img src={result} className="w-full" />
               </div>
             </div>
           </div>
-          <a href={result} download="no-background.png" className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-black text-black font-semibold rounded-xl hover:bg-gray-50 transition-all">
-            <Download size={16} /> Download PNG
+          <a href={result} download="no-background.png"
+            className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-black text-black font-semibold rounded-xl hover:bg-gray-50">
+            <Download size={16} />Download Transparent PNG
           </a>
         </div>
       )}
