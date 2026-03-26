@@ -35,7 +35,7 @@ const QUICK_PROMPTS = [
 
 export default function Chat() {
   const { userId, isReady } = useAuth();
-  const { currentStep, advance } = useTutorial();
+  const { currentStep, advance, isCompleted: tutorialDone } = useTutorial();
   const { speak } = useSpeechSynthesis();
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -107,7 +107,7 @@ export default function Chat() {
       queryClient.invalidateQueries({ queryKey: getListMessagesQueryKey({ sessionId: currentSessionId }) });
       queryClient.invalidateQueries({ queryKey: getListSessionsQueryKey({ userId: userId! }) });
 
-      if (result?.content) {
+      if (result?.content && tutorialDone) {
         speak(result.content);
       }
 

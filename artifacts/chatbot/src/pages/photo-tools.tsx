@@ -35,26 +35,43 @@ function GenerateTab() {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const abortRef = useRef<AbortController | null>(null);
 
   const generate = async () => {
     if (!prompt.trim()) return;
+    abortRef.current?.abort();
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+    const timer = setTimeout(() => ctrl.abort(), 120_000);
     setLoading(true); setError(""); setImageUrl(null);
     try {
       const res = await fetch("/api/tools/generate-image", {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt }),
+        signal: ctrl.signal,
       });
-      if (!res.ok) throw new Error("Failed");
+      clearTimeout(timer);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Failed");
+      }
       const data = await res.json();
       if (data.b64_json) {
         setImageUrl(`data:image/png;base64,${data.b64_json}`);
-      } else if (data.url) {
-        setImageUrl(data.url);
       } else {
         throw new Error("No image returned");
       }
-    } catch { setError("Could not generate image. Please try again."); }
-    finally { setLoading(false); }
+    } catch (e: any) {
+      if (e.name === "AbortError") {
+        setError("Generation timed out. Please try again.");
+      } else {
+        setError("Image generation failed. Please try again in a moment.");
+      }
+    } finally {
+      clearTimeout(timer);
+      setLoading(false);
+    }
   };
 
   return (
@@ -64,9 +81,14 @@ function GenerateTab() {
         rows={4} className="w-full border-2 border-gray-200 rounded-xl p-3 text-sm focus:border-black focus:outline-none resize-none" />
       <button onClick={generate} disabled={loading || !prompt.trim()}
         className="w-full py-3 bg-black text-white font-semibold rounded-xl disabled:opacity-40 flex items-center justify-center gap-2">
-        {loading ? <><Loader2 size={18} className="animate-spin" />Generating...</> : <><Wand2 size={18} />Generate Image</>}
+        {loading
+          ? <><Loader2 size={18} className="animate-spin" />Generating — this can take 30–60 seconds...</>
+          : <><Wand2 size={18} />Generate Image</>}
       </button>
-      {error && <p className="text-red-500 text-sm">{error}</p>}
+      {loading && (
+        <p className="text-xs text-center text-gray-400">AI is creating your image. Please wait, don't close the page.</p>
+      )}
+      {error && <p className="text-red-500 text-sm text-center">{error}</p>}
       {imageUrl && (
         <div className="space-y-3">
           <img src={imageUrl} alt="Generated" className="w-full rounded-2xl border shadow-lg" />
@@ -101,6 +123,19 @@ async function compressImage(file: File, maxDim = 1024): Promise<File> {
   });
 }
 
+async function fileToBase64(file: File): Promise<string> {
+  const compressed = file.size > 1.5 * 1024 * 1024 ? await compressImage(file) : file;
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      resolve(result.replace(/^data:[^;]+;base64,/, ""));
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(compressed);
+  });
+}
+
 function EditTab() {
   const [mainImg, setMainImg] = useState<string | null>(null);
   const [overlayImg, setOverlayImg] = useState<string | null>(null);
@@ -112,6 +147,7 @@ function EditTab() {
   const [status, setStatus] = useState("");
   const mainImgRef = useRef<HTMLImageElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const handleMainUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -132,53 +168,69 @@ function EditTab() {
     setOverlayImg(URL.createObjectURL(file));
   };
 
+  const callBackendEdit = async (base64: string, prompt: string, endpoint = "/api/tools/edit-image") => {
+    abortRef.current?.abort();
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+    const timer = setTimeout(() => ctrl.abort(), 120_000);
+    try {
+      const body = endpoint.includes("remove-bg")
+        ? JSON.stringify({ imageBase64: base64 })
+        : JSON.stringify({ imageBase64: base64, instruction: prompt });
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+        signal: ctrl.signal,
+      });
+      clearTimeout(timer);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "AI edit failed");
+      }
+      return await res.json();
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+
   const applyEdit = async () => {
     if (!mainImgRef.current || !instruction.trim()) return;
     const lower = instruction.toLowerCase();
     setLoading(true); setResult(null); setStatus("Processing...");
     try {
+      const isBackground = lower.includes("background") || lower.includes("remove bg") || lower.includes("transparent");
+      const isRemoval = !isBackground && (
+        lower.includes("remove") || lower.includes("erase") || lower.includes("delete") ||
+        lower.includes("cut out") || lower.includes("clean up") || lower.includes("get rid of")
+      );
+      const isAddOverlay = (lower.includes("add") || lower.includes("put") || lower.includes("place")) && overlayFile;
       const isFilterOnly =
         (lower.includes("bright") || lower.includes("dark") || lower.includes("contrast") ||
          lower.includes("saturate") || lower.includes("vivid") || lower.includes("colorful") ||
          lower.includes("black and white") || lower.includes("bw") || lower.includes("grayscale") ||
          lower.includes("monochrome") || lower.includes("rotate") || lower.includes("flip") ||
          lower.includes("sepia") || lower.includes("vintage") || lower.includes("warm") || lower.includes("mirror")) &&
-        !(lower.includes("remove") || lower.includes("erase") || lower.includes("delete") || lower.includes("cut out") || lower.includes("add") || lower.includes("put") || lower.includes("place"));
+        !isRemoval && !isBackground && !isAddOverlay;
 
-      const isPersonRemoval = !isFilterOnly && (
-        lower.includes("remove") || lower.includes("erase") || lower.includes("delete") || lower.includes("cut out") ||
-        lower.includes("clean up") || lower.includes("get rid of")
-      ) && !(lower.includes("background") || lower.includes("remove bg") || lower.includes("transparent"));
-
-      if (isPersonRemoval) {
-        setStatus("Sending to AI for object/person removal...");
+      if (isBackground) {
+        setStatus("Sending to AI — removing background... (30–90 seconds)");
+        const base64 = await fileToBase64(mainFile!);
+        const data = await callBackendEdit(base64, "", "/api/tools/remove-bg");
+        setResult(`data:image/png;base64,${data.resultBase64}`);
+        setStatus("Background removed! ✅");
+      } else if (isRemoval) {
+        setStatus("AI is analysing your image — this can take 30–90 seconds...");
         const canvas = document.createElement("canvas");
         const img = mainImgRef.current;
         canvas.width = img.naturalWidth;
         canvas.height = img.naturalHeight;
         canvas.getContext("2d")!.drawImage(img, 0, 0);
         const base64 = canvas.toDataURL("image/png").replace("data:image/png;base64,", "");
-        const res = await fetch("/api/tools/edit-image", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ imageBase64: base64, instruction }),
-        });
-        if (!res.ok) throw new Error("AI edit failed");
-        const data = await res.json();
+        const data = await callBackendEdit(base64, instruction);
         setResult(`data:image/png;base64,${data.resultBase64}`);
         setStatus("Done! ✅");
-      } else if (lower.includes("background") || lower.includes("remove bg") || lower.includes("transparent")) {
-        setStatus("Loading AI model (this may take 30s)...");
-        const file = mainFile!;
-        const compressed = file.size > 1.5 * 1024 * 1024 ? await compressImage(file) : file;
-        const { removeBackground } = await import("@imgly/background-removal");
-        const blob = await removeBackground(compressed, {
-          publicPath: "https://unpkg.com/@imgly/background-removal@1.7.0/dist/",
-          debug: false,
-        });
-        setResult(URL.createObjectURL(blob));
-        setStatus("Background removed! ✅");
-      } else if ((lower.includes("add") || lower.includes("put") || lower.includes("place")) && overlayFile) {
+      } else if (isAddOverlay) {
         const canvas = canvasRef.current!;
         const main = mainImgRef.current;
         canvas.width = main.naturalWidth;
@@ -199,9 +251,11 @@ function EditTab() {
           ctx.drawImage(overlay, x, y, w, h);
           setResult(canvas.toDataURL("image/png"));
           setStatus("Element added! ✅");
+          setLoading(false);
         };
         overlay.src = overlayImg!;
-      } else {
+        return;
+      } else if (isFilterOnly) {
         const canvas = canvasRef.current!;
         const img = mainImgRef.current;
         let br = 100, co = 100, sa = 100, rotation = 0;
@@ -235,9 +289,19 @@ function EditTab() {
         ctx.restore();
         setResult(canvas.toDataURL("image/png"));
         setStatus("Edit applied! ✅");
+      } else {
+        setStatus("AI is editing your image — this can take 30–90 seconds...");
+        const base64 = await fileToBase64(mainFile!);
+        const data = await callBackendEdit(base64, instruction);
+        setResult(`data:image/png;base64,${data.resultBase64}`);
+        setStatus("Done! ✅");
       }
     } catch (e: any) {
-      setStatus("Could not process. Try: 'remove background', 'make brighter', 'rotate 90°', 'black and white', 'add overlay top-right'");
+      if (e.name === "AbortError") {
+        setStatus("Timed out. Please try again — AI edits can take up to 90 seconds.");
+      } else {
+        setStatus("Could not process. Try: 'remove centre person', 'make brighter', 'rotate 90°', 'black and white'");
+      }
     } finally {
       setLoading(false);
     }
@@ -285,7 +349,7 @@ function EditTab() {
             <input
               value={instruction}
               onChange={e => setInstruction(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && applyEdit()}
+              onKeyDown={e => e.key === "Enter" && !loading && applyEdit()}
               placeholder="Type what you want to do..."
               className="flex-1 border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:border-black focus:outline-none"
             />
@@ -296,9 +360,12 @@ function EditTab() {
           </div>
 
           {status && (
-            <p className={cn("text-sm font-medium", status.includes("✅") ? "text-green-600" : status.includes("Could not") ? "text-red-500" : "text-blue-600")}>
+            <p className={cn("text-sm font-medium", status.includes("✅") ? "text-green-600" : status.includes("Could not") || status.includes("Timed out") ? "text-red-500" : "text-blue-600")}>
               {loading && <Loader2 size={14} className="inline animate-spin mr-1" />}{status}
             </p>
+          )}
+          {loading && (
+            <p className="text-xs text-center text-gray-400">Please wait and don't close the page. AI edits can take 30–90 seconds.</p>
           )}
 
           {result && (
@@ -330,25 +397,41 @@ function RemoveBgTab() {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("");
   const [fileCache, setFileCache] = useState<File | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const process = async (file: File) => {
+    abortRef.current?.abort();
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+    const timer = setTimeout(() => ctrl.abort(), 120_000);
     setResult(null);
     setLoading(true);
     setStatus("Compressing image...");
     try {
-      const compressed = file.size > 1.5 * 1024 * 1024 ? await compressImage(file) : file;
-      setStatus("Loading AI model (~30s first time)...");
-      const { removeBackground } = await import("@imgly/background-removal");
-      setStatus("Removing background...");
-      const blob = await removeBackground(compressed, {
-        publicPath: "https://unpkg.com/@imgly/background-removal@1.7.0/dist/",
-        debug: false,
+      const base64 = await fileToBase64(file);
+      setStatus("AI is removing background — please wait 30–90 seconds...");
+      const res = await fetch("/api/tools/remove-bg", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageBase64: base64 }),
+        signal: ctrl.signal,
       });
-      setResult(URL.createObjectURL(blob));
+      clearTimeout(timer);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Failed");
+      }
+      const data = await res.json();
+      setResult(`data:image/png;base64,${data.resultBase64}`);
       setStatus("Done! ✅");
-    } catch {
-      setStatus("error");
+    } catch (e: any) {
+      if (e.name === "AbortError") {
+        setStatus("Timed out — please try again with a smaller image.");
+      } else {
+        setStatus("error");
+      }
     } finally {
+      clearTimeout(timer);
       setLoading(false);
     }
   };
@@ -380,11 +463,20 @@ function RemoveBgTab() {
         <input type="file" accept="image/*" className="hidden" onChange={handleUpload} disabled={loading} />
       </label>
 
-      {status === "error" && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 space-y-2">
-          <p className="text-red-600 text-sm font-semibold">Background removal failed</p>
-          <p className="text-red-500 text-xs">This can happen with very large images or on slow connections. Try with a smaller photo.</p>
-          <button onClick={retry} className="w-full py-2 bg-red-500 text-white font-semibold rounded-xl text-sm hover:bg-red-600">
+      {!loading && status === "error" && (
+        <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 space-y-2">
+          <p className="text-orange-700 text-sm font-semibold">Something went wrong — please try again</p>
+          <p className="text-orange-500 text-xs">Try with a smaller or simpler image if the issue persists.</p>
+          <button onClick={retry} className="w-full py-2 bg-black text-white font-semibold rounded-xl text-sm hover:bg-gray-800">
+            Try Again
+          </button>
+        </div>
+      )}
+      {!loading && status.includes("Timed out") && (
+        <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 space-y-2">
+          <p className="text-orange-700 text-sm font-semibold">Timed out — AI is busy</p>
+          <p className="text-orange-500 text-xs">Please try again in a moment or use a smaller image.</p>
+          <button onClick={retry} className="w-full py-2 bg-black text-white font-semibold rounded-xl text-sm hover:bg-gray-800">
             Try Again
           </button>
         </div>
