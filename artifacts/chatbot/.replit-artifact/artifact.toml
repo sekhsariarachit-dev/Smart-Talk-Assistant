@@ -15,7 +15,7 @@ paths = [ "/" ]
 localPort = 22967
 
 [services.development]
-run = "pnpm --filter @workspace/chatbot run dev"
+run = "PORT=22967 BASE_PATH=/ pnpm --filter @workspace/chatbot run dev"
 
 [services.production]
 build = [ "pnpm", "--filter", "@workspace/chatbot", "run", "build" ]
