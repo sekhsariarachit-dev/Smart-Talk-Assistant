@@ -412,7 +412,15 @@ function WatermarkTab() {
 
       {result && (
         <div className="space-y-3">
-          <p className="text-xs text-green-600 font-semibold">✅ Done! Preview and download below.</p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-green-600 font-semibold">✅ Done! Watermark removed.</p>
+            <button
+              onClick={() => { setResult(null); setProgress(""); }}
+              className="text-xs text-red-500 hover:text-red-700 font-medium flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-red-50 transition-all"
+            >
+              <span>🗑</span> Delete Result
+            </button>
+          </div>
           <video src={result} controls className="w-full rounded-xl border bg-black" />
           <a href={result} download="no-watermark.mp4"
             className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-black text-black font-semibold rounded-xl hover:bg-gray-50">

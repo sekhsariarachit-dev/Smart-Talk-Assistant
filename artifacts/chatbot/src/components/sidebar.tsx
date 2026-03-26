@@ -236,7 +236,7 @@ export function Sidebar({
                     key={session.id}
                     onClick={() => { if (location !== "/") navigate("/"); onSelectSession(session.id); if (window.innerWidth < 768) onToggle(); }}
                     className={cn(
-                      "relative w-full flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200",
+                      "group relative w-full flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200",
                       activeSessionId === session.id
                         ? "bg-gray-100 text-black"
                         : "text-gray-600 hover:bg-gray-50 hover:text-black"

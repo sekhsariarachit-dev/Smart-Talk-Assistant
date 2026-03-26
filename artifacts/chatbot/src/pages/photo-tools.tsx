@@ -46,7 +46,13 @@ function GenerateTab() {
       });
       if (!res.ok) throw new Error("Failed");
       const data = await res.json();
-      setImageUrl(data.url);
+      if (data.b64_json) {
+        setImageUrl(`data:image/png;base64,${data.b64_json}`);
+      } else if (data.url) {
+        setImageUrl(data.url);
+      } else {
+        throw new Error("No image returned");
+      }
     } catch { setError("Could not generate image. Please try again."); }
     finally { setLoading(false); }
   };
@@ -131,15 +137,18 @@ function EditTab() {
     const lower = instruction.toLowerCase();
     setLoading(true); setResult(null); setStatus("Processing...");
     try {
-      const isPersonRemoval = (
-        lower.includes("remove") || lower.includes("erase") || lower.includes("delete") || lower.includes("cut out")
-      ) && (
-        lower.includes("person") || lower.includes("people") || lower.includes("man") || lower.includes("woman") ||
-        lower.includes("girl") || lower.includes("boy") || lower.includes("face") || lower.includes("figure") ||
-        lower.includes("centre") || lower.includes("center") || lower.includes("left person") ||
-        lower.includes("right person") || lower.includes("middle person") || lower.includes("object") ||
-        lower.includes("logo") || lower.includes("text") || lower.includes("watermark") || lower.includes("someone")
-      );
+      const isFilterOnly =
+        (lower.includes("bright") || lower.includes("dark") || lower.includes("contrast") ||
+         lower.includes("saturate") || lower.includes("vivid") || lower.includes("colorful") ||
+         lower.includes("black and white") || lower.includes("bw") || lower.includes("grayscale") ||
+         lower.includes("monochrome") || lower.includes("rotate") || lower.includes("flip") ||
+         lower.includes("sepia") || lower.includes("vintage") || lower.includes("warm") || lower.includes("mirror")) &&
+        !(lower.includes("remove") || lower.includes("erase") || lower.includes("delete") || lower.includes("cut out") || lower.includes("add") || lower.includes("put") || lower.includes("place"));
+
+      const isPersonRemoval = !isFilterOnly && (
+        lower.includes("remove") || lower.includes("erase") || lower.includes("delete") || lower.includes("cut out") ||
+        lower.includes("clean up") || lower.includes("get rid of")
+      ) && !(lower.includes("background") || lower.includes("remove bg") || lower.includes("transparent"));
 
       if (isPersonRemoval) {
         setStatus("Sending to AI for object/person removal...");
@@ -164,7 +173,7 @@ function EditTab() {
         const compressed = file.size > 1.5 * 1024 * 1024 ? await compressImage(file) : file;
         const { removeBackground } = await import("@imgly/background-removal");
         const blob = await removeBackground(compressed, {
-          publicPath: "https://unpkg.com/@imgly/background-removal@1.5.7/dist/",
+          publicPath: "https://unpkg.com/@imgly/background-removal@1.7.0/dist/",
           debug: false,
         });
         setResult(URL.createObjectURL(blob));
@@ -332,7 +341,7 @@ function RemoveBgTab() {
       const { removeBackground } = await import("@imgly/background-removal");
       setStatus("Removing background...");
       const blob = await removeBackground(compressed, {
-        publicPath: "https://unpkg.com/@imgly/background-removal@1.5.7/dist/",
+        publicPath: "https://unpkg.com/@imgly/background-removal@1.7.0/dist/",
         debug: false,
       });
       setResult(URL.createObjectURL(blob));
