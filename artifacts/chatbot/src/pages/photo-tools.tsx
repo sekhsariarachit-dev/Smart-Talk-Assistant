@@ -131,7 +131,34 @@ function EditTab() {
     const lower = instruction.toLowerCase();
     setLoading(true); setResult(null); setStatus("Processing...");
     try {
-      if (lower.includes("background") || lower.includes("remove bg") || lower.includes("transparent")) {
+      const isPersonRemoval = (
+        lower.includes("remove") || lower.includes("erase") || lower.includes("delete") || lower.includes("cut out")
+      ) && (
+        lower.includes("person") || lower.includes("people") || lower.includes("man") || lower.includes("woman") ||
+        lower.includes("girl") || lower.includes("boy") || lower.includes("face") || lower.includes("figure") ||
+        lower.includes("centre") || lower.includes("center") || lower.includes("left person") ||
+        lower.includes("right person") || lower.includes("middle person") || lower.includes("object") ||
+        lower.includes("logo") || lower.includes("text") || lower.includes("watermark") || lower.includes("someone")
+      );
+
+      if (isPersonRemoval) {
+        setStatus("Sending to AI for object/person removal...");
+        const canvas = document.createElement("canvas");
+        const img = mainImgRef.current;
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        canvas.getContext("2d")!.drawImage(img, 0, 0);
+        const base64 = canvas.toDataURL("image/png").replace("data:image/png;base64,", "");
+        const res = await fetch("/api/tools/edit-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ imageBase64: base64, instruction }),
+        });
+        if (!res.ok) throw new Error("AI edit failed");
+        const data = await res.json();
+        setResult(`data:image/png;base64,${data.resultBase64}`);
+        setStatus("Done! ✅");
+      } else if (lower.includes("background") || lower.includes("remove bg") || lower.includes("transparent")) {
         setStatus("Loading AI model (this may take 30s)...");
         const file = mainFile!;
         const compressed = file.size > 1.5 * 1024 * 1024 ? await compressImage(file) : file;
@@ -207,7 +234,7 @@ function EditTab() {
     }
   };
 
-  const SUGGESTIONS = ["Remove background", "Make it brighter", "Black and white", "Rotate 90°", "Make darker", "Add saturated colors", "Vintage/sepia look", "Mirror flip"];
+  const SUGGESTIONS = ["Remove centre person", "Remove person on left", "Remove person on right", "Remove background", "Make it brighter", "Black and white", "Rotate 90°", "Vintage/sepia look"];
 
   return (
     <div className="p-4 max-w-xl mx-auto space-y-4">

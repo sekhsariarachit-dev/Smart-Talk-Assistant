@@ -13,6 +13,7 @@ import {
 } from "@workspace/api-client-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useTutorial } from "@/lib/tutorial-context";
+import { useSpeechSynthesis } from "@/hooks/use-speech";
 import { Sidebar } from "@/components/sidebar";
 import { ChatInput } from "@/components/chat-input";
 import { ChatMessageItem } from "@/components/chat-message-item";
@@ -35,6 +36,7 @@ const QUICK_PROMPTS = [
 export default function Chat() {
   const { userId, isReady } = useAuth();
   const { currentStep, advance } = useTutorial();
+  const { speak } = useSpeechSynthesis();
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [rightPanel, setRightPanel] = useState<"notebook" | "project" | null>(null);
@@ -104,6 +106,10 @@ export default function Chat() {
       });
       queryClient.invalidateQueries({ queryKey: getListMessagesQueryKey({ sessionId: currentSessionId }) });
       queryClient.invalidateQueries({ queryKey: getListSessionsQueryKey({ userId: userId! }) });
+
+      if (result?.content) {
+        speak(result.content);
+      }
 
       if (currentStep === "type_message") advance("type_message");
     } catch (error) {

@@ -1,5 +1,5 @@
-import React, { useState, useRef } from "react";
-import { Film, Upload, Download, Scissors, EyeOff, Loader2, Send } from "lucide-react";
+import React, { useState, useRef, useEffect } from "react";
+import { Film, Upload, Download, Scissors, EyeOff, Loader2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile, toBlobURL } from "@ffmpeg/util";
@@ -35,7 +35,7 @@ export default function VideoTools() {
           <button key={t} onClick={() => setTab(t)}
             className={cn("flex-1 py-3 text-sm font-medium transition-colors border-b-2",
               tab === t ? "border-black text-black" : "border-transparent text-gray-500 hover:text-black")}>
-            {t === "trim" ? "Trim / Remove Clip" : "Remove Watermark"}
+            {t === "trim" ? "Trim / Remove Clip" : "Remove Watermark / Logo"}
           </button>
         ))}
       </div>
@@ -166,26 +166,63 @@ function computeRegion(pos: Position, size: WSize, vw: number, vh: number) {
   return { x: Math.max(0, xMap[pos]), y: Math.max(0, yMap[pos]), w, h };
 }
 
-function parseInstruction(text: string, vw: number, vh: number): { x: number; y: number; w: number; h: number } | null {
+function parsePositionFromText(text: string): Position | null {
   const lower = text.toLowerCase();
-  let pos: Position = "top-left";
+  if (lower.includes("top-left") || lower.includes("top left") || lower.includes("upper left")) return "top-left";
+  if (lower.includes("top-right") || lower.includes("top right") || lower.includes("upper right")) return "top-right";
+  if (lower.includes("top center") || lower.includes("top middle") || lower.includes("top")) return "top-center";
+  if (lower.includes("bottom-left") || lower.includes("bottom left") || lower.includes("lower left")) return "bot-left";
+  if (lower.includes("bottom-right") || lower.includes("bottom right") || lower.includes("lower right")) return "bot-right";
+  if (lower.includes("bottom center") || lower.includes("bottom middle") || lower.includes("bottom") || lower.includes("footer")) return "bot-center";
+  if (lower.includes("center") || lower.includes("centre") || lower.includes("middle")) return "center";
+  if (lower.includes("left")) return "mid-left";
+  if (lower.includes("right")) return "mid-right";
+  return null;
+}
+
+function parseInstruction(text: string, vw: number, vh: number): { region: { x: number; y: number; w: number; h: number }; positionDetected: boolean } {
+  const lower = text.toLowerCase();
   let size: WSize = "medium";
-
-  if (lower.includes("top-left") || lower.includes("top left") || lower.includes("upper left")) pos = "top-left";
-  else if (lower.includes("top-right") || lower.includes("top right") || lower.includes("upper right")) pos = "top-right";
-  else if (lower.includes("top center") || lower.includes("top middle") || lower.includes("top")) pos = "top-center";
-  else if (lower.includes("bottom-left") || lower.includes("bottom left") || lower.includes("lower left")) pos = "bot-left";
-  else if (lower.includes("bottom-right") || lower.includes("bottom right") || lower.includes("lower right")) pos = "bot-right";
-  else if (lower.includes("bottom center") || lower.includes("bottom middle") || lower.includes("bottom") || lower.includes("footer")) pos = "bot-center";
-  else if (lower.includes("center") || lower.includes("middle")) pos = "center";
-  else if (lower.includes("left")) pos = "mid-left";
-  else if (lower.includes("right")) pos = "mid-right";
-
   if (lower.includes("banner") || lower.includes("full width") || lower.includes("strip")) size = "banner";
   else if (lower.includes("large") || lower.includes("big")) size = "large";
   else if (lower.includes("small") || lower.includes("tiny") || lower.includes("little")) size = "small";
 
-  return computeRegion(pos, size, vw, vh);
+  const detectedPos = parsePositionFromText(text);
+  const pos = detectedPos ?? "top-left";
+  return { region: computeRegion(pos, size, vw, vh), positionDetected: detectedPos !== null };
+}
+
+function VideoRegionOverlay({ region, videoDims, videoRef }: {
+  region: { x: number; y: number; w: number; h: number };
+  videoDims: { w: number; h: number };
+  videoRef: React.RefObject<HTMLVideoElement | null>;
+}) {
+  const [rect, setRect] = useState<DOMRect | null>(null);
+
+  useEffect(() => {
+    if (videoRef.current) setRect(videoRef.current.getBoundingClientRect());
+  }, [videoRef, region]);
+
+  if (!rect || videoDims.w === 0) return null;
+
+  const scaleX = rect.width / videoDims.w;
+  const scaleY = rect.height / videoDims.h;
+
+  const left = region.x * scaleX;
+  const top = region.y * scaleY;
+  const width = region.w * scaleX;
+  const height = region.h * scaleY;
+
+  return (
+    <div className="absolute inset-0 pointer-events-none" style={{ left: rect.left - (videoRef.current?.parentElement?.getBoundingClientRect().left ?? 0), top: rect.top - (videoRef.current?.parentElement?.getBoundingClientRect().top ?? 0) }}>
+      <div
+        className="absolute border-2 border-red-500 bg-red-500/20"
+        style={{ left, top, width, height }}
+      >
+        <span className="absolute -top-5 left-0 text-xs bg-red-500 text-white px-1 rounded whitespace-nowrap">Logo region</span>
+      </div>
+    </div>
+  );
 }
 
 function WatermarkTab() {
@@ -197,13 +234,26 @@ function WatermarkTab() {
   const [position, setPosition] = useState<Position>("top-left");
   const [wSize, setWSize] = useState<WSize>("medium");
   const [instruction, setInstruction] = useState("");
-  const [videoDims, setVideoDims] = useState({ w: 1280, h: 720 });
+  const [videoDims, setVideoDims] = useState({ w: 0, h: 0 });
+  const [noPositionWarning, setNoPositionWarning] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const videoContainerRef = useRef<HTMLDivElement>(null);
+
+  const previewRegion = videoDims.w > 0
+    ? computeRegion(
+        instruction.trim()
+          ? (parsePositionFromText(instruction) ?? position)
+          : position,
+        wSize,
+        videoDims.w,
+        videoDims.h
+      )
+    : null;
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setResult(null); setProgress("");
+    setResult(null); setProgress(""); setNoPositionWarning(false);
     setVideoFile(file);
     setVideoSrc(URL.createObjectURL(file));
   };
@@ -217,20 +267,27 @@ function WatermarkTab() {
   const handleRemove = async () => {
     if (!videoFile) return;
     let region: { x: number; y: number; w: number; h: number };
+    let posDetected = true;
+
     if (instruction.trim()) {
       const parsed = parseInstruction(instruction, videoDims.w, videoDims.h);
-      region = parsed || computeRegion(position, wSize, videoDims.w, videoDims.h);
+      region = parsed.region;
+      posDetected = parsed.positionDetected;
+      if (!posDetected) {
+        region = computeRegion(position, wSize, videoDims.w, videoDims.h);
+      }
     } else {
       region = computeRegion(position, wSize, videoDims.w, videoDims.h);
     }
 
+    setNoPositionWarning(!posDetected && instruction.trim().length > 0);
     setLoading(true); setResult(null);
     try {
       setProgress("Loading video processor...");
       const ffmpeg = await getFFmpeg();
       ffmpeg.on("progress", ({ progress: p }) => setProgress(`Processing: ${Math.round(p * 100)}%`));
       await ffmpeg.writeFile("input.mp4", await fetchFile(videoFile));
-      setProgress("Removing watermark...");
+      setProgress("Removing logo/watermark...");
       await ffmpeg.exec([
         "-i", "input.mp4",
         "-vf", `delogo=x=${region.x}:y=${region.y}:w=${region.w}:h=${region.h}`,
@@ -250,7 +307,7 @@ function WatermarkTab() {
   return (
     <div className="p-4 max-w-xl mx-auto space-y-4">
       <div className="bg-blue-50 rounded-xl p-3 text-xs text-blue-700 font-medium">
-        📝 Upload your video, then either <strong>type where the watermark is</strong> (e.g. "remove top-left logo") or select its position manually below.
+        📝 Upload your video, then <strong>select where the logo/watermark is</strong> on the grid below. You can also type a description to help.
       </div>
 
       <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-2xl p-6 cursor-pointer hover:border-black transition-colors">
@@ -260,22 +317,54 @@ function WatermarkTab() {
       </label>
 
       {videoSrc && (
-        <video ref={videoRef} src={videoSrc} controls className="w-full rounded-xl border bg-black" onLoadedMetadata={handleVideoLoaded} />
+        <div className="relative" ref={videoContainerRef}>
+          <video
+            ref={videoRef}
+            src={videoSrc}
+            controls
+            className="w-full rounded-xl border bg-black"
+            onLoadedMetadata={handleVideoLoaded}
+          />
+          {previewRegion && videoDims.w > 0 && videoRef.current && (
+            <div className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden">
+              {(() => {
+                const vEl = videoRef.current;
+                const scaleX = (vEl.offsetWidth) / videoDims.w;
+                const scaleY = (vEl.offsetHeight) / videoDims.h;
+                return (
+                  <div
+                    className="absolute border-2 border-red-500 bg-red-400/25"
+                    style={{
+                      left: previewRegion.x * scaleX,
+                      top: previewRegion.y * scaleY,
+                      width: previewRegion.w * scaleX,
+                      height: previewRegion.h * scaleY,
+                    }}
+                  >
+                    <span className="absolute -top-5 left-0 text-[10px] bg-red-500 text-white px-1.5 py-0.5 rounded whitespace-nowrap font-semibold">
+                      Will be removed
+                    </span>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+        </div>
       )}
 
       <div>
-        <label className="block text-xs font-semibold text-gray-600 mb-2">Tell AI what to remove (optional):</label>
+        <label className="block text-xs font-semibold text-gray-600 mb-2">Describe the logo (optional):</label>
         <div className="flex gap-2">
           <input
             value={instruction}
-            onChange={e => setInstruction(e.target.value)}
-            placeholder='e.g. "remove top-right watermark" or "bottom banner logo"'
+            onChange={e => { setInstruction(e.target.value); setNoPositionWarning(false); }}
+            placeholder='e.g. "top-right watermark", "bottom banner", "top-left logo"'
             className="flex-1 border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:border-black focus:outline-none"
           />
         </div>
         <div className="flex flex-wrap gap-1.5 mt-2">
           {["Top-left logo", "Top-right logo", "Bottom banner", "Bottom-left logo", "Bottom-right logo", "Center logo"].map(s => (
-            <button key={s} onClick={() => setInstruction(s)}
+            <button key={s} onClick={() => { setInstruction(s); setNoPositionWarning(false); }}
               className="px-2.5 py-1 bg-gray-100 hover:bg-black hover:text-white text-gray-700 text-xs rounded-full transition-all">
               {s}
             </button>
@@ -283,10 +372,19 @@ function WatermarkTab() {
         </div>
       </div>
 
+      {noPositionWarning && (
+        <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3">
+          <AlertCircle size={16} className="text-amber-500 mt-0.5 shrink-0" />
+          <p className="text-xs text-amber-700">
+            <strong>Position not found in your text.</strong> We couldn't detect where the logo is from your description. Please select the position manually on the grid below.
+          </p>
+        </div>
+      )}
+
       <div>
-        <label className="block text-xs font-semibold text-gray-600 mb-2">Or select position manually:</label>
+        <label className="block text-xs font-semibold text-gray-600 mb-2">Select logo position (click to set):</label>
         <div className="grid grid-cols-3 gap-1.5 w-40">
-          {POSITION_GRID.map((row, ri) => row.map(({ id, label }) => (
+          {POSITION_GRID.map((row) => row.map(({ id, label }) => (
             <button key={id} onClick={() => setPosition(id)}
               className={cn("h-10 rounded-xl text-lg font-bold transition-all border-2",
                 position === id ? "bg-black text-white border-black" : "bg-gray-50 text-gray-600 border-gray-200 hover:border-gray-400")}>
@@ -308,12 +406,13 @@ function WatermarkTab() {
       {videoSrc && (
         <button onClick={handleRemove} disabled={loading}
           className="w-full py-3 bg-black text-white font-bold rounded-xl disabled:opacity-40 flex items-center justify-center gap-2">
-          {loading ? <><Loader2 size={18} className="animate-spin" />{progress}</> : <><EyeOff size={18} />Remove Watermark</>}
+          {loading ? <><Loader2 size={18} className="animate-spin" />{progress}</> : <><EyeOff size={18} />Remove Logo / Watermark</>}
         </button>
       )}
 
       {result && (
         <div className="space-y-3">
+          <p className="text-xs text-green-600 font-semibold">✅ Done! Preview and download below.</p>
           <video src={result} controls className="w-full rounded-xl border bg-black" />
           <a href={result} download="no-watermark.mp4"
             className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-black text-black font-semibold rounded-xl hover:bg-gray-50">

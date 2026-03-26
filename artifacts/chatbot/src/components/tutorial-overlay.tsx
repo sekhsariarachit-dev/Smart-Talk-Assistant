@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTutorial, TutorialStep } from "@/lib/tutorial-context";
 import { Info, CheckCircle2 } from "lucide-react";
@@ -43,6 +43,42 @@ const stepContent: Record<TutorialStep, { title: string; desc: string; actionTex
 
 export function TutorialOverlay() {
   const { currentStep, advance, isCompleted } = useTutorial();
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const stopAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+  };
+
+  const speakText = async (text: string) => {
+    stopAudio();
+    try {
+      const response = await fetch("/api/tts/speak", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      if (!response.ok) return;
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.onended = () => { URL.revokeObjectURL(url); audioRef.current = null; };
+      audio.onerror = () => { URL.revokeObjectURL(url); audioRef.current = null; };
+      await audio.play();
+    } catch {}
+  };
+
+  useEffect(() => {
+    if (isCompleted) return;
+    const content = stepContent[currentStep];
+    if (content) {
+      speakText(`${content.title}. ${content.desc}`);
+    }
+    return () => stopAudio();
+  }, [currentStep]);
 
   if (isCompleted) return null;
 
