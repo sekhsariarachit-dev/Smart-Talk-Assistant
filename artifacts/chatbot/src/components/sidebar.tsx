@@ -1,6 +1,6 @@
 import React from "react";
 import { format } from "date-fns";
-import { MessageSquare, Plus, Trash2, X, ImageIcon, Film, GraduationCap } from "lucide-react";
+import { MessageSquare, Plus, Trash2, X, GraduationCap } from "lucide-react";
 import { ChatSession, useDeleteSession } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getListSessionsQueryKey } from "@workspace/api-client-react";
@@ -16,7 +16,7 @@ const PERSONALITIES: { id: Personality; emoji: string; label: string }[] = [
   { id: "strict", emoji: "😤", label: "Strict" },
   { id: "motivator", emoji: "💪", label: "Hype" },
   { id: "friend", emoji: "🤝", label: "Friend" },
-  { id: "photovideo", emoji: "🎬", label: "Video Edit" },
+  { id: "photovideo", emoji: "📸", label: "Photo & Video" },
   { id: "teacher_course", emoji: "🎓", label: "Courses" },
 ];
 
@@ -39,8 +39,6 @@ const MINI_TOOLS: { emoji: string; label: string; prompt: string }[] = [
 ];
 
 const navLinks = [
-  { href: "/tools/photo", icon: ImageIcon, label: "Photo Tools" },
-  { href: "/tools/video", icon: Film, label: "Video Tools" },
   { href: "/courses", icon: GraduationCap, label: "AI Courses" },
 ];
 
