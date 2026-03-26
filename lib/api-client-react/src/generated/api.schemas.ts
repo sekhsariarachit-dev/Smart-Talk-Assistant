@@ -40,9 +40,12 @@ export type SendMessageRequestExplainLevel =
   (typeof SendMessageRequestExplainLevel)[keyof typeof SendMessageRequestExplainLevel];
 
 export const SendMessageRequestExplainLevel = {
-  child: "child",
-  student: "student",
-  expert: "expert",
+  class1: "class1",
+  class5: "class5",
+  class8: "class8",
+  class11: "class11",
+  college: "college",
+  professional: "professional",
 } as const;
 
 export interface MessageAttachment {

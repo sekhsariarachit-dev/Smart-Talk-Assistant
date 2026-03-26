@@ -194,7 +194,7 @@ components:
           enum: [default, teacher, funny, strict, motivator, friend, photovideo, teacher_course]
         explainLevel:
           type: string
-          enum: [child, student, expert]
+          enum: [class1, class5, class8, class11, college, professional]
         attachments:
           type: array
           items:

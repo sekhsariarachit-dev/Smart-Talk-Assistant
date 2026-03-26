@@ -17,9 +17,12 @@ const PERSONALITIES: Record<string, string> = {
 };
 
 const EXPLAIN_LEVELS: Record<string, string> = {
-  child: "IMPORTANT: Explain this like the user is 5 years old. Use very simple words, fun analogies, and short sentences. Avoid all jargon.",
-  student: "IMPORTANT: Explain this at a student level — clear, educational, with examples. Not too technical but thorough.",
-  expert: "IMPORTANT: Explain this at an expert level — use technical terminology, go deep, assume advanced knowledge.",
+  class1: "IMPORTANT: Explain this for a Class 1-4 student (age 6-9). Use very simple words, short sentences, and fun everyday examples. Avoid all jargon.",
+  class5: "IMPORTANT: Explain this for a Class 5-7 student (age 10-12). Use clear simple language with relatable examples and basic concepts.",
+  class8: "IMPORTANT: Explain this for a Class 8-10 student (age 13-15). Use clear language, introduce technical terms with explanations, use structured examples.",
+  class11: "IMPORTANT: Explain this for a Class 11-12 student (age 16-18). Use proper academic language, include definitions and theory, go deeper into concepts.",
+  college: "IMPORTANT: Explain this at a college/university level. Use academic terminology, reference frameworks and theories, provide in-depth analysis.",
+  professional: "IMPORTANT: Explain this at a professional/expert level. Use industry terminology, assume advanced knowledge, and provide technical depth and precision.",
 };
 
 const GENERATE_MODES: Record<string, string> = {
@@ -217,6 +220,35 @@ router.post("/messages", async (req, res) => {
     });
   } catch (err) {
     req.log.error({ err }, "Error sending message");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/homework-check", async (req, res) => {
+  const { lessonTitle, homework, studentWork } = req.body;
+  if (!lessonTitle || !homework || !studentWork) {
+    res.status(400).json({ error: "lessonTitle, homework, and studentWork are required" });
+    return;
+  }
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-5.2",
+      max_completion_tokens: 2048,
+      messages: [
+        {
+          role: "system",
+          content: "You are an encouraging, supportive AI teacher checking student homework. Be warm, specific, and constructive. Always find positives first, then suggest improvements. Give a score out of 10. Format your response with clear sections: ✅ What you did well, 💡 Suggestions to improve, 🎯 Score: X/10, 🌟 Final encouragement.",
+        },
+        {
+          role: "user",
+          content: `Lesson: ${lessonTitle}\n\nHomework Assignment: ${homework}\n\nStudent's submitted work:\n${studentWork}\n\nPlease grade this homework with specific, encouraging feedback.`,
+        },
+      ],
+    });
+    const feedback = completion.choices[0]?.message?.content || "Great effort! Keep it up!";
+    res.json({ feedback });
+  } catch (err) {
+    req.log.error({ err }, "Error checking homework");
     res.status(500).json({ error: "Internal server error" });
   }
 });

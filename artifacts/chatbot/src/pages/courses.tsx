@@ -1,21 +1,36 @@
-import React, { useState, useEffect } from "react";
-import { GraduationCap, ChevronDown, ChevronUp, CheckCircle2, Circle } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  GraduationCap, Play, Pause, Square, ChevronRight, CheckCircle2,
+  Upload, Send, Bell, BellOff, Star, Flame, Trophy, ArrowLeft, Volume2, BookOpen, Zap
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const PROGRESS_KEY = "ai_courses_progress";
+const PROGRESS_KEY = "ai_courses_progress_v2";
+const STREAK_KEY = "ai_courses_streak";
+const NOTIFICATION_KEY = "ai_courses_notifications";
+
+interface Homework {
+  task: string;
+  example: string;
+  type: "text" | "code";
+}
 
 interface Lesson {
   id: string;
   title: string;
   duration: string;
+  emoji: string;
   content: string;
+  homework: Homework;
 }
 
 interface Course {
   id: string;
   title: string;
   description: string;
-  color: string;
+  emoji: string;
+  gradient: string;
+  accent: string;
   lessons: Lesson[];
 }
 
@@ -24,145 +39,670 @@ const courses: Course[] = [
     id: "ai-basics",
     title: "AI Basics",
     description: "Understand what artificial intelligence is and how it works",
-    color: "bg-blue-50 border-blue-200",
+    emoji: "🤖",
+    gradient: "from-blue-500 to-cyan-400",
+    accent: "blue",
     lessons: [
-      { id: "what-is-ai", title: "What is Artificial Intelligence?", duration: "5 min", content: `**Artificial Intelligence (AI)** is the simulation of human intelligence by computer systems. AI enables machines to perform tasks that typically require human thinking — like recognizing speech, making decisions, translating languages, and understanding images.\n\n**Types of AI:**\n- **Narrow AI** — Designed for one specific task (e.g., face recognition, chess)\n- **General AI** — Can perform any intellectual task a human can (still theoretical)\n- **Super AI** — Surpasses human intelligence in all areas (theoretical)\n\n**How AI learns:**\nAI learns from data. The more data it sees, the better it gets — similar to how a child learns from experience.\n\n**Real-world AI examples:**\n- Google Search\n- Netflix recommendations\n- Siri & Alexa\n- Self-driving cars\n- Medical diagnosis tools` },
-      { id: "ml-basics", title: "Machine Learning Explained", duration: "7 min", content: `**Machine Learning (ML)** is a branch of AI where computers learn from data without being explicitly programmed.\n\n**How it works:**\n1. You give the AI thousands of examples\n2. It finds patterns in the data\n3. It uses those patterns to make predictions on new data\n\n**Types of Machine Learning:**\n- **Supervised Learning** — Trained on labeled examples (cat/not-cat photos)\n- **Unsupervised Learning** — Finds hidden patterns in unlabeled data\n- **Reinforcement Learning** — Learns by trial and error with rewards (like training a dog)\n\n**Real examples:**\n- Email spam detection\n- Credit card fraud detection\n- Product recommendations\n- Voice assistants` },
-      { id: "llms", title: "Large Language Models (LLMs)", duration: "6 min", content: `**Large Language Models (LLMs)** are AI systems trained on massive amounts of text. They can understand and generate human language.\n\n**Famous LLMs:**\n- **GPT-4/5** by OpenAI (powers ChatGPT)\n- **Gemini** by Google\n- **Claude** by Anthropic\n- **Llama** by Meta\n\n**How LLMs work:**\nThey predict the next word in a sequence based on everything they've learned. This simple idea, scaled to billions of parameters and trained on the entire internet, results in remarkably intelligent behavior.\n\n**What LLMs can do:**\n- Answer questions\n- Write code\n- Summarize documents\n- Translate languages\n- Create creative content\n- Analyze data` },
+      {
+        id: "what-is-ai",
+        title: "What is Artificial Intelligence?",
+        duration: "5 min",
+        emoji: "🧠",
+        content: `Welcome, student! Today we start your AI journey. Let's begin with the most important question — what IS artificial intelligence?
+
+Artificial Intelligence, or AI, is when we teach computers to think and learn like humans. Imagine you have a very smart friend who reads millions of books, watches millions of videos, and then uses all that knowledge to answer your questions. That's basically what AI does!
+
+Types of AI you should know:
+
+Narrow AI — This AI does ONE thing really well. Like how your phone recognizes your face, or how Netflix knows what shows you'll like. It's smart, but only at that one task.
+
+General AI — This is AI that can do ANYTHING a human can do. Scientists are still working on building this. It doesn't fully exist yet!
+
+Super AI — This is a future AI that would be smarter than ALL humans combined. This is still just a theory.
+
+How does AI actually learn? Think of it like teaching a child. If you show a child 1000 pictures of cats and say "this is a cat" each time, the child learns to recognize cats. AI works the same way — just with millions of examples instead of 1000.
+
+Real-world AI you use every day:
+- Google Search uses AI to find the best results for you
+- YouTube uses AI to recommend your next video
+- Siri and Alexa use AI to understand your voice
+- Your phone's camera uses AI to make your photos look great
+
+Pretty amazing, right? AI is already all around you!`,
+        homework: {
+          task: "List 5 examples of AI you use in your daily life. For each one, write 2-3 sentences explaining: (1) What does it do? (2) How does it make your life easier? Be creative and specific!",
+          example: "Example: 1. YouTube Recommendations — YouTube's AI watches what videos I like and suggests similar ones. It learns from my viewing history. This saves me time finding videos I'll enjoy.",
+          type: "text"
+        }
+      },
+      {
+        id: "ml-basics",
+        title: "Machine Learning Explained",
+        duration: "7 min",
+        emoji: "⚙️",
+        content: `Welcome back, student! Today we're going deeper. We're learning about Machine Learning — the engine that powers most AI today.
+
+Machine Learning, or ML, is a type of AI where computers learn from experience WITHOUT being specifically programmed for every situation. Sounds magical? Let me explain!
+
+Imagine you want to teach a computer to tell cats from dogs. The OLD way would be to write rules: "If it has whiskers and meows, it's a cat." But what about unusual cats? What about dogs that look like cats? The rules would get too complicated!
+
+Machine Learning takes a DIFFERENT approach:
+Step 1: Show the computer thousands of labeled photos — "cat", "dog", "cat", "dog"
+Step 2: The computer finds patterns on its own — shapes, colors, sizes, features
+Step 3: Now give it a NEW photo — it uses those patterns to guess correctly!
+
+The Three Types of Machine Learning:
+
+Supervised Learning — You give labeled examples. "This email is spam, this is not spam." The AI learns from your labels. Used for: email filters, disease diagnosis, fraud detection.
+
+Unsupervised Learning — No labels! The AI finds its own patterns. Used for: grouping customers by behavior, finding unusual activity in data.
+
+Reinforcement Learning — The AI learns by trial and error with rewards. Like training a dog with treats! The AI tries an action, gets a "reward" if it's good, gets "punished" if it's bad. Used for: game-playing AI, robots learning to walk.
+
+Real examples you might not have thought about:
+- Your email spam filter uses supervised learning
+- Banks use ML to spot fraudulent transactions in milliseconds
+- Spotify uses ML to create your personalized playlists
+- Self-driving cars use ML to understand road situations`,
+        homework: {
+          task: "Explain how a spam email filter works using machine learning concepts from today's lesson. Write at least 4-5 sentences covering: (1) What type of ML does it use? (2) What does it learn from? (3) How does it make decisions? (4) What happens when it makes mistakes?",
+          example: "Think about it: every time you mark an email as spam, you're giving the AI a labeled example to learn from!",
+          type: "text"
+        }
+      },
+      {
+        id: "llms",
+        title: "Large Language Models (LLMs)",
+        duration: "6 min",
+        emoji: "💬",
+        content: `Great progress, student! Now we're learning about the technology behind ChatGPT, Claude, and other modern AI assistants — Large Language Models, or LLMs.
+
+What is an LLM? Imagine someone read the ENTIRE internet — every book, article, Wikipedia page, forum, code repository — and remembered all of it. Then you could ask them anything. That's basically an LLM!
+
+But here's the clever part about HOW they work:
+
+LLMs are trained to do one thing: predict the next word. That's it! If you give them "The sky is...", they've seen so many examples that they know "blue" is a great next word. But this simple ability, when scaled to BILLIONS of examples, creates remarkably intelligent behavior.
+
+Famous LLMs you should know:
+- GPT-4 and GPT-5 by OpenAI — powers ChatGPT and this very assistant you're using!
+- Gemini by Google — Google's answer to ChatGPT
+- Claude by Anthropic — focused on being helpful and safe
+- Llama by Meta — open source, anyone can use it
+
+Parameters — the brain cells of AI. A parameter is like a single connection in the AI's "brain". GPT-4 has about 1.8 TRILLION parameters. Each one helps the AI understand language better.
+
+What can LLMs do?
+✦ Answer any question on any topic
+✦ Write essays, stories, poems, and code
+✦ Translate between hundreds of languages
+✦ Summarize long documents
+✦ Debug your programs
+✦ Have natural conversations
+✦ Analyze data and find patterns
+
+One important thing: LLMs don't "know" things like humans do. They recognize patterns in language. That's why they can sometimes make mistakes or "hallucinate" — they predict words that sound right but aren't actually true. Always verify important facts!`,
+        homework: {
+          task: "Write a short explanation (5-7 sentences) of what a Large Language Model is, written as if you're explaining it to a friend who has never heard of AI. Use simple language, an analogy or comparison, and at least one real-world example. Don't copy the lesson — use your own words!",
+          example: "Tip: Try explaining it like 'An LLM is like...' and use something your friend understands.",
+          type: "text"
+        }
+      },
     ]
   },
   {
     id: "prompt-engineering",
     title: "Prompt Engineering",
     description: "Learn how to communicate effectively with AI to get the best results",
-    color: "bg-purple-50 border-purple-200",
+    emoji: "✍️",
+    gradient: "from-purple-500 to-pink-500",
+    accent: "purple",
     lessons: [
-      { id: "what-is-prompting", title: "What is Prompt Engineering?", duration: "4 min", content: `**Prompt Engineering** is the skill of writing instructions for AI systems to get the best possible output.\n\nThink of it like giving instructions to a very smart assistant — the clearer and more specific you are, the better the result.\n\n**Why it matters:**\nThe same AI can give very different answers depending on how you phrase your question. A well-crafted prompt can be the difference between a generic response and an incredibly useful one.\n\n**The basics:**\n- Be specific about what you want\n- Provide context\n- Tell the AI what format you want\n- Give examples if needed` },
-      { id: "prompt-techniques", title: "Prompt Techniques That Work", duration: "8 min", content: `**Technique 1: Be Specific**\n❌ "Write about dogs"\n✅ "Write a 200-word informative paragraph about Golden Retrievers for a children's book"\n\n**Technique 2: Set the Role**\n"Act as an expert Python developer and review this code for bugs..."\n"You are a professional nutritionist. Create a meal plan for..."\n\n**Technique 3: Give Examples (Few-Shot)**\nShow the AI examples of what you want:\n"Summarize this in the style of:\nInput: [long text]\nSummary: [short summary]\nNow do the same for: [your text]"\n\n**Technique 4: Chain of Thought**\nAsk the AI to think step by step:\n"Solve this math problem step by step..."\n\n**Technique 5: Specify Format**\n"Give me the answer as a numbered list"\n"Format your response as a JSON object"\n"Use markdown with headers"` },
-      { id: "advanced-prompting", title: "Advanced Prompting Strategies", duration: "10 min", content: `**1. Iterative Refinement**\nDon't expect perfection on the first try. Refine your prompt based on the output:\n- "This is good but make it more casual"\n- "Add more technical details to section 2"\n- "Shorten this to 100 words"\n\n**2. System Prompts**\nSet the AI's behavior at the start:\n"For this entire conversation, you are a financial advisor specializing in cryptocurrency. Only answer questions related to crypto investments."\n\n**3. Constraints**\nAdd boundaries to guide the AI:\n- "Do not use technical jargon"\n- "Keep each point to one sentence"\n- "Only use information from the document I provide"\n\n**4. Temperature Control (for developers)**\nLower temperature = more focused and deterministic\nHigher temperature = more creative and varied\n\n**5. The RISEN Framework:**\n- **R**ole: "You are a..."\n- **I**nstructions: "Your task is to..."\n- **S**teps: "Follow these steps..."\n- **E**nd Goal: "The goal is to..."\n- **N**arrow: "Only focus on..."` },
+      {
+        id: "what-is-prompting",
+        title: "What is Prompt Engineering?",
+        duration: "4 min",
+        emoji: "🎯",
+        content: `Hello, student! Today we unlock one of the most valuable skills in the AI age: Prompt Engineering.
+
+What is a prompt? A prompt is the instruction or question you give to an AI. And prompt engineering is the skill of writing those instructions in the BEST possible way to get exactly what you want.
+
+Think of it this way: if you hire a brilliant assistant and you say "write something about dogs" — you might get anything. An essay, a poem, a joke, a recipe with dogs in the title! But if you say "write a 200-word informative article about the intelligence of Golden Retrievers for a 10-year-old audience" — now you'll get exactly what you need.
+
+The same AI, the same intelligence. The ONLY difference is the prompt. This is why prompt engineering is so powerful!
+
+Why does prompting matter?
+- Two people using the same AI can get VERY different results just from how they write their prompts
+- Good prompts can save you hours of editing and rewriting
+- In some companies, skilled prompt engineers earn $300,000+ per year!
+
+The basics every prompt should have:
+1. Context — Give the AI background information. Who is this for? What situation?
+2. Task — Be specific about exactly what you want
+3. Format — Tell the AI how you want the answer formatted
+4. Tone — Formal? Casual? Technical? Simple?
+
+Bad prompt vs Good prompt:
+❌ "Tell me about climate change"
+✅ "Write a 3-paragraph summary of the main causes of climate change for a high school essay. Use simple language, include 2 specific examples, and end with a hopeful note about solutions."
+
+See the difference? The good prompt gives context, specifies length, target audience, language level, examples needed, and even the desired ending!`,
+        homework: {
+          task: "Write 3 different prompts for this task: 'I want the AI to help me write an apology message to my friend.' Write one BAD prompt, one OKAY prompt, and one GREAT prompt. Explain in one sentence why each prompt is bad, okay, or great.",
+          example: "Show your understanding of context, specificity, format, and tone in your great prompt!",
+          type: "text"
+        }
+      },
+      {
+        id: "prompt-techniques",
+        title: "Prompt Techniques That Work",
+        duration: "8 min",
+        emoji: "🔧",
+        content: `Welcome back! Let's build your prompt engineering toolkit. These techniques work every time!
+
+TECHNIQUE 1: Role Assignment
+Give the AI a specific role to play. This dramatically changes the quality and style of the response.
+Example: "You are an expert nutritionist with 20 years of experience. Explain why breakfast is important."
+vs: "Explain why breakfast is important."
+The role assignment gets you a more authoritative, detailed answer!
+
+TECHNIQUE 2: Be Specific About Format
+Tell the AI EXACTLY how you want the answer:
+- "Give me a numbered list of 5 tips"
+- "Format this as a table with columns for Name, Price, Pros, Cons"
+- "Write this as a dialogue between two people"
+- "Respond with only bullet points, no paragraphs"
+
+TECHNIQUE 3: Few-Shot Examples
+Show the AI what you want with examples:
+"Summarize news articles like this:
+Article: [long text]
+Summary: [short 2-sentence summary]
+
+Now do the same for this article: [your article]"
+
+TECHNIQUE 4: Chain of Thought
+Ask the AI to think step by step for complex problems:
+"Solve this step by step, showing your work: [math problem]"
+"Think through this carefully before answering: [complex question]"
+
+TECHNIQUE 5: Specify Your Audience
+"Explain quantum physics to a 10-year-old"
+"Explain quantum physics to a physics professor"
+"Explain quantum physics to someone who loves cooking — use food analogies"
+
+TECHNIQUE 6: Set Constraints
+Boundaries help the AI stay focused:
+"Explain in exactly 3 sentences"
+"Only include examples from the last 5 years"
+"Do not use technical jargon"
+"Keep the reading level at Grade 7"
+
+COMBINING TECHNIQUES:
+"You are a professional chef [ROLE]. Write a recipe for chocolate cake [TASK] that a complete beginner can follow [AUDIENCE]. Format it as numbered steps [FORMAT] and keep each step to one sentence [CONSTRAINT]. Include a fun tip at the end [EXTRA]."`,
+        homework: {
+          task: "Take this weak prompt: 'help me study' — and rewrite it using AT LEAST 3 different techniques from today's lesson. Label which technique you used for each part of your improved prompt. Then explain in 2 sentences why your rewritten prompt is better.",
+          example: "Your final prompt should be detailed, specific, and get a much more useful response!",
+          type: "text"
+        }
+      },
     ]
   },
   {
-    id: "ai-tools",
-    title: "AI Tools Overview",
-    description: "Explore the most powerful AI tools available today",
-    color: "bg-green-50 border-green-200",
+    id: "ai-coding",
+    title: "AI-Powered Coding",
+    description: "Use AI to write, debug, and understand code",
+    emoji: "💻",
+    gradient: "from-green-500 to-emerald-400",
+    accent: "green",
     lessons: [
-      { id: "chatgpt", title: "ChatGPT — The AI Assistant", duration: "5 min", content: `**ChatGPT** was released by OpenAI on **November 30, 2022**, and quickly became the fastest-growing consumer application in history.\n\n**What it can do:**\n- Answer any question\n- Write essays, emails, code, stories\n- Analyze and summarize documents\n- Help with math and science\n- Brainstorm ideas\n- Learn and tutor you on any topic\n\n**ChatGPT versions:**\n- **GPT-3.5** — Fast, free tier\n- **GPT-4** — More powerful, available in Plus\n- **GPT-4o** — Multimodal (can see images, hear voice)\n- **GPT-5** — Latest, most capable\n\n**Pro Tips:**\n- Use it to debug code by pasting your error\n- Ask it to explain complex topics "like I'm 10"\n- Use it to draft and then refine professional emails` },
-      { id: "image-gen", title: "AI Image Generation", duration: "6 min", content: `**AI Image Generators** create images from text descriptions (prompts).\n\n**Popular tools:**\n- **DALL-E 3** (OpenAI) — Excellent at following instructions\n- **Midjourney** — Best for artistic, stylized images\n- **Stable Diffusion** — Open source, runs locally\n- **Adobe Firefly** — Integrated into Adobe products\n\n**Writing good image prompts:**\n1. Describe the subject clearly\n2. Specify the style (photorealistic, cartoon, oil painting...)\n3. Add lighting details (golden hour, studio lighting...)\n4. Mention composition (close-up, wide angle, aerial view...)\n\n**Example prompt:**\n"A majestic lion sitting on a rock at sunset, photorealistic, warm golden lighting, National Geographic style, high detail"\n\n**Use cases:**\n- Social media content\n- Logo concepts\n- Book illustrations\n- Marketing materials\n- Personal art` },
-      { id: "ai-coding", title: "AI for Coding", duration: "7 min", content: `**AI coding assistants** can dramatically speed up software development.\n\n**Top tools:**\n- **GitHub Copilot** — Autocompletes code in your editor\n- **Cursor** — AI-native code editor\n- **ChatGPT/Claude** — Great for explaining and debugging\n- **Replit AI** — Builds full apps from descriptions\n\n**What AI can do for coding:**\n- Write functions from descriptions\n- Debug errors (paste the error message!)\n- Explain what code does\n- Convert code between languages\n- Write tests\n- Optimize slow code\n- Generate boilerplate\n\n**How to get the best coding help:**\n1. Paste the error message exactly\n2. Share the relevant code\n3. Describe what you expect vs what happens\n4. Ask it to explain its solution\n\n**Example:**\n"Here is my Python code. It should return the top 5 items by price but I'm getting an index error. [paste code] Fix the bug and explain what was wrong."` },
-    ]
-  },
-  {
-    id: "ai-safety",
-    title: "AI Safety & Ethics",
-    description: "Understanding responsible AI use and potential risks",
-    color: "bg-orange-50 border-orange-200",
-    lessons: [
-      { id: "ai-limitations", title: "AI Limitations & Hallucinations", duration: "5 min", content: `**AI is powerful, but not perfect.** Understanding its limitations helps you use it more effectively.\n\n**Hallucinations:**\nAI can confidently state incorrect information. This is called "hallucination." The AI doesn't know what it doesn't know.\n\n**Examples of AI mistakes:**\n- Inventing fake research papers and citations\n- Getting recent events wrong (training data cutoff)\n- Making math errors\n- Misunderstanding context\n\n**How to protect yourself:**\n- Always verify important facts from primary sources\n- Don't use AI for medical, legal, or financial decisions without expert review\n- Ask the AI "How confident are you?" or "What are your sources?"\n- Be especially careful with numbers and statistics\n\n**When AI is most reliable:**\n- Well-established topics with lots of training data\n- Creative tasks (writing, brainstorming)\n- Explaining concepts\n- Code generation (but test the code!)` },
-      { id: "privacy", title: "Privacy & AI", duration: "4 min", content: `**Protecting your privacy when using AI tools is important.**\n\n**What you should NEVER share with AI:**\n- Passwords or login credentials\n- Credit card or bank details\n- Your national ID number\n- Private medical information about yourself or others\n- Confidential business information\n- Personal details of other people without consent\n\n**How AI companies use your data:**\n- Conversations may be used to train future models\n- Some services offer "no training" options in settings\n- Enterprise plans often have stronger privacy protections\n\n**Best practices:**\n- Read the privacy policy of AI tools you use\n- Use the privacy settings available (e.g., turn off chat history)\n- Anonymize data before sharing (replace names with [NAME])\n- Use enterprise or self-hosted versions for sensitive work` },
+      {
+        id: "first-python",
+        title: "Your First Python Program with AI",
+        duration: "10 min",
+        emoji: "🐍",
+        content: `Welcome to coding class! Today you're going to write your first Python program — and use AI to help you understand every line!
+
+Don't worry if you've never coded before. That's exactly why AI is so powerful — it can teach you and write code WITH you!
+
+What is Python? Python is a programming language — a way to give instructions to a computer. It's the most popular language for AI and data science, and it's designed to be easy to read.
+
+Your first program — "Hello World":
+print("Hello, World!")
+
+That's it! That ONE line tells the computer to display the words "Hello, World!" on screen. Let's break it down:
+- print() — this is a "function", a command that does something
+- "Hello, World!" — this is a "string", a piece of text
+
+Now let's write something more personal:
+
+name = "Arjun"
+age = 16
+print("My name is " + name)
+print("I am " + str(age) + " years old")
+
+Breaking this down:
+- name = "Arjun" — we're creating a "variable", a box that stores information
+- age = 16 — storing the number 16 in a variable called age
+- str(age) — converting the number to text so we can combine it with words
+
+How to use AI for coding:
+1. Ask AI to EXPLAIN code: "What does this Python code do: [paste code]?"
+2. Ask AI to WRITE code: "Write Python code that asks for my name and says hello to me"
+3. Ask AI to FIX errors: "I got this error: [paste error]. Here's my code: [paste code]. What's wrong?"
+4. Ask AI to IMPROVE code: "Here's my Python code. How can I make it better?"
+
+The golden rule of AI-assisted coding: Always understand WHAT the code does, not just copy-paste it. When you understand, you can modify and build on it!
+
+Your task today: Write a Python program that asks the user for their name and favorite color, then prints a personalized message like "Hello Sara! Your favorite color blue is amazing!"`,
+        homework: {
+          task: "Write a Python program that: (1) Asks the user for their name, (2) Asks for their favorite number, (3) Multiplies that number by 2 and prints it, (4) Prints a final encouraging message. Submit your actual code below. Use AI to help you if you get stuck — that's allowed! Just make sure you understand each line.",
+          example: "Example output: 'Enter your name: Sara | Enter your favorite number: 7 | Your number doubled is: 14 | Great job Sara, you coded your first program!'",
+          type: "code"
+        }
+      },
     ]
   },
 ];
 
+function speak(text: string, onStart?: () => void, onEnd?: () => void) {
+  window.speechSynthesis.cancel();
+  const clean = text
+    .replace(/\*\*/g, "")
+    .replace(/✦/g, "")
+    .replace(/❌|✅/g, "")
+    .replace(/[^\w\s.,!?'":\-()\n]/g, " ")
+    .substring(0, 3000);
+  const utterance = new SpeechSynthesisUtterance(clean);
+  utterance.rate = 0.88;
+  utterance.pitch = 1.05;
+  utterance.lang = "en-US";
+  const voices = window.speechSynthesis.getVoices();
+  const preferred = voices.find(v => v.name.toLowerCase().includes("female") || v.name.toLowerCase().includes("google us english") || v.name.toLowerCase().includes("samantha"));
+  if (preferred) utterance.voice = preferred;
+  utterance.onstart = () => onStart?.();
+  utterance.onend = () => onEnd?.();
+  utterance.onerror = () => onEnd?.();
+  window.speechSynthesis.speak(utterance);
+}
+
+type View = "home" | "lesson";
+
 export default function Courses() {
   const [progress, setProgress] = useState<Set<string>>(new Set());
-  const [openLesson, setOpenLesson] = useState<string | null>(null);
+  const [streak, setStreak] = useState(0);
+  const [view, setView] = useState<View>("home");
+  const [activeCourse, setActiveCourse] = useState<Course | null>(null);
+  const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
+  const [speaking, setSpeaking] = useState(false);
+  const [hwText, setHwText] = useState("");
+  const [hwFeedback, setHwFeedback] = useState<string | null>(null);
+  const [hwLoading, setHwLoading] = useState(false);
+  const [notifEnabled, setNotifEnabled] = useState(false);
+  const [xp, setXp] = useState(0);
+  const hwRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem(PROGRESS_KEY);
-    if (saved) setProgress(new Set(JSON.parse(saved)));
+    if (saved) {
+      const ids: string[] = JSON.parse(saved);
+      setProgress(new Set(ids));
+      setXp(ids.length * 100);
+    }
+    const st = localStorage.getItem(STREAK_KEY);
+    if (st) setStreak(parseInt(st) || 0);
+    const notif = localStorage.getItem(NOTIFICATION_KEY);
+    if (notif === "true") setNotifEnabled(true);
+    window.speechSynthesis.getVoices();
   }, []);
 
   const markComplete = (lessonId: string) => {
     const next = new Set(progress);
+    const wasNew = !next.has(lessonId);
     if (next.has(lessonId)) next.delete(lessonId);
     else next.add(lessonId);
     setProgress(next);
     localStorage.setItem(PROGRESS_KEY, JSON.stringify([...next]));
+    if (wasNew) {
+      setXp(p => p + 100);
+      const today = new Date().toDateString();
+      const lastDay = localStorage.getItem("last_lesson_day");
+      if (lastDay !== today) {
+        const newStreak = streak + 1;
+        setStreak(newStreak);
+        localStorage.setItem(STREAK_KEY, String(newStreak));
+        localStorage.setItem("last_lesson_day", today);
+      }
+    }
   };
 
-  const totalLessons = courses.reduce((acc, c) => acc + c.lessons.length, 0);
+  const openLesson = (course: Course, lesson: Lesson) => {
+    window.speechSynthesis.cancel();
+    setSpeaking(false);
+    setActiveCourse(course);
+    setActiveLesson(lesson);
+    setView("lesson");
+    setHwText("");
+    setHwFeedback(null);
+  };
+
+  const goHome = () => {
+    window.speechSynthesis.cancel();
+    setSpeaking(false);
+    setView("home");
+    setActiveLesson(null);
+    setActiveCourse(null);
+  };
+
+  const toggleSpeak = () => {
+    if (speaking) {
+      window.speechSynthesis.cancel();
+      setSpeaking(false);
+    } else if (activeLesson) {
+      const intro = `Lesson: ${activeLesson.title}. ${activeLesson.content}`;
+      speak(intro, () => setSpeaking(true), () => setSpeaking(false));
+    }
+  };
+
+  const submitHomework = async () => {
+    if (!hwText.trim() || !activeLesson) return;
+    setHwLoading(true);
+    setHwFeedback(null);
+    try {
+      const apiBase = (import.meta as any).env?.BASE_URL?.replace(/\/$/, "") || "";
+      const res = await fetch(`${apiBase}/api/chat/homework-check`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lessonTitle: activeLesson.title,
+          homework: activeLesson.homework.task,
+          studentWork: hwText,
+        }),
+      });
+      const data = await res.json();
+      setHwFeedback(data.feedback || "Great effort! Keep it up!");
+      if (activeLesson) markComplete(activeLesson.id);
+      if (!speaking) {
+        speak(`Here is your feedback! ${data.feedback}`, () => setSpeaking(true), () => setSpeaking(false));
+      }
+    } catch {
+      setHwFeedback("Could not connect to the AI teacher. Please try again!");
+    } finally {
+      setHwLoading(false);
+    }
+  };
+
+  const requestNotifications = async () => {
+    if (!("Notification" in window)) {
+      alert("Your browser doesn't support notifications.");
+      return;
+    }
+    const perm = await Notification.requestPermission();
+    if (perm === "granted") {
+      setNotifEnabled(true);
+      localStorage.setItem(NOTIFICATION_KEY, "true");
+      new Notification("🎓 AI Learning Academy", {
+        body: "You're all set! You'll get daily reminders to keep your learning streak alive! 🔥",
+        icon: "/favicon.ico",
+      });
+    }
+  };
+
+  const totalLessons = courses.reduce((a, c) => a + c.lessons.length, 0);
   const completed = progress.size;
+  const pct = Math.round((completed / totalLessons) * 100);
+
+  if (view === "lesson" && activeLesson && activeCourse) {
+    return (
+      <div className="flex flex-col h-screen bg-gray-50">
+        <header className={cn("bg-gradient-to-r shrink-0 text-white px-4 py-3 flex items-center gap-3", activeCourse.gradient)}>
+          <button onClick={goHome} className="p-2 hover:bg-white/20 rounded-xl transition-all">
+            <ArrowLeft size={20} />
+          </button>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium opacity-80">{activeCourse.title}</p>
+            <p className="font-bold text-base truncate">{activeLesson.title}</p>
+          </div>
+          <button
+            onClick={toggleSpeak}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-2 rounded-xl font-semibold text-sm transition-all",
+              speaking ? "bg-white text-gray-800" : "bg-white/20 hover:bg-white/30"
+            )}
+          >
+            {speaking ? <><Pause size={16} /> Pause</> : <><Volume2 size={16} /> Listen</>}
+          </button>
+        </header>
+
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-2xl mx-auto p-4 space-y-4">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className={cn("bg-gradient-to-r p-4 text-white flex items-center gap-3", activeCourse.gradient)}>
+                <span className="text-3xl">{activeLesson.emoji}</span>
+                <div>
+                  <h2 className="font-bold text-lg leading-tight">{activeLesson.title}</h2>
+                  <p className="text-xs opacity-80">{activeLesson.duration} lesson</p>
+                </div>
+              </div>
+              {speaking && (
+                <div className="px-4 py-2 bg-yellow-50 border-b border-yellow-100 flex items-center gap-2">
+                  <div className="flex gap-0.5">
+                    {[1,2,3,4].map(i => (
+                      <div key={i} className="w-1 bg-yellow-400 rounded-full animate-bounce"
+                        style={{ height: `${8 + (i % 3) * 6}px`, animationDelay: `${i * 0.1}s` }} />
+                    ))}
+                  </div>
+                  <span className="text-xs font-semibold text-yellow-700">AI teacher is speaking...</span>
+                  <button onClick={toggleSpeak} className="ml-auto text-xs text-yellow-600 hover:text-yellow-800 font-medium">Stop</button>
+                </div>
+              )}
+              <div className="p-4">
+                <div className="prose prose-sm max-w-none text-gray-700 leading-relaxed whitespace-pre-line">
+                  {activeLesson.content}
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-200 rounded-2xl overflow-hidden">
+              <div className="bg-gradient-to-r from-amber-400 to-orange-400 px-4 py-3 flex items-center gap-2">
+                <Zap size={18} className="text-white" />
+                <span className="font-bold text-white">Homework Assignment</span>
+                <span className="ml-auto text-xs bg-white/30 text-white px-2 py-0.5 rounded-full font-semibold">+100 XP</span>
+              </div>
+              <div className="p-4 space-y-3">
+                <p className="text-sm font-medium text-gray-800 leading-relaxed">{activeLesson.homework.task}</p>
+                <div className="bg-white/70 rounded-xl p-3 border border-amber-200">
+                  <p className="text-xs text-amber-700 font-semibold mb-1">💡 Hint</p>
+                  <p className="text-xs text-gray-600">{activeLesson.homework.example}</p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-gray-600">Your Answer:</label>
+                  <textarea
+                    ref={hwRef}
+                    value={hwText}
+                    onChange={e => setHwText(e.target.value)}
+                    placeholder={activeLesson.homework.type === "code"
+                      ? "# Write your Python code here...\n\nname = input('Enter your name: ')\n..."
+                      : "Write your answer here..."
+                    }
+                    rows={6}
+                    className={cn(
+                      "w-full px-3 py-2.5 rounded-xl border border-amber-200 bg-white text-sm text-gray-800 focus:outline-none focus:border-amber-400 resize-none leading-relaxed",
+                      activeLesson.homework.type === "code" && "font-mono"
+                    )}
+                  />
+                  <button
+                    onClick={submitHomework}
+                    disabled={!hwText.trim() || hwLoading}
+                    className={cn(
+                      "w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all",
+                      hwText.trim() && !hwLoading
+                        ? "bg-gradient-to-r from-amber-400 to-orange-400 text-white hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0"
+                        : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                    )}
+                  >
+                    {hwLoading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        AI teacher is checking your work...
+                      </>
+                    ) : (
+                      <><Send size={16} /> Submit for AI Review</>
+                    )}
+                  </button>
+                </div>
+
+                {hwFeedback && (
+                  <div className="bg-white rounded-xl border-2 border-green-200 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <div className="bg-gradient-to-r from-green-400 to-emerald-400 px-4 py-2 flex items-center gap-2">
+                      <Star size={16} className="text-white" />
+                      <span className="font-bold text-white text-sm">AI Teacher Feedback</span>
+                    </div>
+                    <div className="p-4">
+                      <p className="text-sm text-gray-700 whitespace-pre-line leading-relaxed">{hwFeedback}</p>
+                    </div>
+                    <div className="px-4 pb-3">
+                      <button
+                        onClick={() => markComplete(activeLesson.id)}
+                        className={cn(
+                          "w-full py-2.5 rounded-xl text-sm font-bold transition-all",
+                          progress.has(activeLesson.id)
+                            ? "bg-green-100 text-green-700 border border-green-200"
+                            : "bg-black text-white hover:bg-gray-900"
+                        )}
+                      >
+                        {progress.has(activeLesson.id) ? "✅ Lesson Completed! +100 XP earned" : "Mark Lesson Complete"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col h-screen bg-white">
-      <header className="h-14 border-b flex items-center px-4 gap-3 shrink-0">
-        <GraduationCap size={20} />
-        <h1 className="font-bold text-lg">AI Courses</h1>
-        <div className="ml-auto text-sm text-gray-500">{completed}/{totalLessons} completed</div>
-      </header>
+    <div className="flex flex-col h-screen bg-gray-50 overflow-hidden">
+      <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white px-4 pt-5 pb-4 shrink-0">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <GraduationCap size={22} />
+            <h1 className="font-bold text-xl">AI Learning Academy</h1>
+          </div>
+          <button
+            onClick={requestNotifications}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all",
+              notifEnabled ? "bg-green-500 text-white" : "bg-white/10 hover:bg-white/20 text-white"
+            )}
+          >
+            {notifEnabled ? <><Bell size={13} /> Reminders ON</> : <><BellOff size={13} /> Set Reminder</>}
+          </button>
+        </div>
 
-      <div className="h-1.5 bg-gray-100 shrink-0">
-        <div className="h-full bg-black transition-all duration-500" style={{ width: `${(completed / totalLessons) * 100}%` }} />
+        <div className="flex items-center gap-4 mb-3">
+          <div className="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-xl">
+            <Flame size={16} className="text-orange-400" />
+            <span className="font-bold text-sm">{streak} day streak</span>
+          </div>
+          <div className="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-xl">
+            <Trophy size={16} className="text-yellow-400" />
+            <span className="font-bold text-sm">{xp} XP</span>
+          </div>
+          <div className="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-xl">
+            <BookOpen size={16} className="text-blue-400" />
+            <span className="font-bold text-sm">{completed}/{totalLessons} done</span>
+          </div>
+        </div>
+
+        <div className="bg-white/10 rounded-full h-2.5 overflow-hidden">
+          <div
+            className="h-full bg-gradient-to-r from-yellow-400 to-green-400 rounded-full transition-all duration-700"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        <p className="text-xs text-white/60 mt-1 text-right">{pct}% complete</p>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-2xl p-4">
+          <div className="flex items-start gap-3">
+            <span className="text-3xl">🎓</span>
+            <div>
+              <p className="font-bold text-gray-800 text-sm">Welcome to your AI classroom!</p>
+              <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">
+                Each lesson has an AI teacher that <strong>speaks</strong> the content aloud, and a homework assignment that the AI will <strong>personally check and grade</strong> for you. Learn at your own pace!
+              </p>
+            </div>
+          </div>
+        </div>
+
         {courses.map(course => {
           const courseCompleted = course.lessons.filter(l => progress.has(l.id)).length;
+          const coursePct = Math.round((courseCompleted / course.lessons.length) * 100);
           return (
-            <div key={course.id} className={cn("rounded-2xl border-2 overflow-hidden", course.color)}>
-              <div className="p-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h2 className="font-bold text-base">{course.title}</h2>
-                    <p className="text-sm text-gray-600 mt-0.5">{course.description}</p>
+            <div key={course.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className={cn("bg-gradient-to-r p-4 text-white", course.gradient)}>
+                <div className="flex items-center gap-3">
+                  <span className="text-4xl">{course.emoji}</span>
+                  <div className="flex-1 min-w-0">
+                    <h2 className="font-bold text-lg leading-tight">{course.title}</h2>
+                    <p className="text-sm opacity-90 mt-0.5">{course.description}</p>
                   </div>
-                  <span className="text-xs font-medium text-gray-500 shrink-0 ml-3">{courseCompleted}/{course.lessons.length}</span>
+                  <span className="shrink-0 text-sm font-bold bg-white/20 px-2 py-1 rounded-lg">
+                    {courseCompleted}/{course.lessons.length}
+                  </span>
+                </div>
+                <div className="mt-3 bg-white/20 rounded-full h-1.5 overflow-hidden">
+                  <div className="h-full bg-white rounded-full transition-all duration-500" style={{ width: `${coursePct}%` }} />
                 </div>
               </div>
-              <div className="border-t border-inherit divide-y divide-gray-100/50">
-                {course.lessons.map(lesson => {
+
+              <div className="divide-y divide-gray-50">
+                {course.lessons.map((lesson, idx) => {
                   const done = progress.has(lesson.id);
-                  const isOpen = openLesson === lesson.id;
                   return (
-                    <div key={lesson.id} className="bg-white/70">
-                      <button
-                        className="w-full flex items-center gap-3 p-4 text-left hover:bg-white/90 transition-colors"
-                        onClick={() => setOpenLesson(isOpen ? null : lesson.id)}
-                      >
-                        <button
-                          onClick={e => { e.stopPropagation(); markComplete(lesson.id); }}
-                          className="shrink-0 text-gray-400 hover:text-black transition-colors"
-                        >
-                          {done ? <CheckCircle2 size={20} className="text-black" /> : <Circle size={20} />}
-                        </button>
-                        <div className="flex-1 min-w-0">
-                          <p className={cn("text-sm font-medium", done && "line-through text-gray-400")}>{lesson.title}</p>
-                          <p className="text-xs text-gray-400">{lesson.duration} read</p>
+                    <button
+                      key={lesson.id}
+                      onClick={() => openLesson(course, lesson)}
+                      className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 transition-all text-left group"
+                    >
+                      <div className={cn(
+                        "w-10 h-10 rounded-2xl flex items-center justify-center text-xl shrink-0 transition-all",
+                        done ? "bg-black" : "bg-gray-100 group-hover:bg-gray-200"
+                      )}>
+                        {done ? <CheckCircle2 size={20} className="text-white" /> : lesson.emoji}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={cn("text-sm font-semibold truncate", done ? "text-gray-400 line-through" : "text-gray-800")}>
+                          {lesson.title}
+                        </p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-xs text-gray-400">{lesson.duration}</span>
+                          <span className="text-xs text-gray-300">•</span>
+                          <span className="text-xs font-medium text-orange-500">+100 XP</span>
+                          {!done && <span className="text-xs bg-gray-100 px-1.5 py-0.5 rounded-full text-gray-500">Includes homework</span>}
                         </div>
-                        {isOpen ? <ChevronUp size={16} className="text-gray-400 shrink-0" /> : <ChevronDown size={16} className="text-gray-400 shrink-0" />}
-                      </button>
-                      {isOpen && (
-                        <div className="px-4 pb-5">
-                          <div className="bg-white rounded-xl p-4 text-sm text-gray-700 leading-relaxed prose prose-sm max-w-none">
-                            {lesson.content.split("\n\n").map((para, i) => (
-                              <div key={i} className="mb-3">
-                                {para.split("\n").map((line, j) => {
-                                  const bold = line.replace(/\*\*(.*?)\*\*/g, (_, t) => `<strong>${t}</strong>`);
-                                  return <p key={j} className="mb-1" dangerouslySetInnerHTML={{ __html: bold }} />;
-                                })}
-                              </div>
-                            ))}
-                          </div>
-                          <button
-                            onClick={() => markComplete(lesson.id)}
-                            className={cn(
-                              "mt-3 w-full py-2 rounded-xl text-sm font-semibold transition-all",
-                              done ? "bg-gray-100 text-gray-600 hover:bg-gray-200" : "bg-black text-white hover:bg-gray-900"
-                            )}
-                          >
-                            {done ? "Mark as Incomplete" : "Mark as Complete"}
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {done && <span className="text-xs font-semibold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">Done</span>}
+                        <ChevronRight size={16} className="text-gray-300 group-hover:text-gray-600 transition-colors" />
+                      </div>
+                    </button>
                   );
                 })}
               </div>
             </div>
           );
         })}
+
+        <div className="text-center py-6 text-gray-400 text-sm">
+          <p className="font-semibold">More courses coming soon! 🚀</p>
+          <p className="text-xs mt-1">Keep your streak alive to unlock bonus content</p>
+        </div>
       </div>
     </div>
   );

@@ -21,7 +21,7 @@ import { NotebookPanel, ProjectPanel } from "@/components/session-panels";
 import { cn } from "@/lib/utils";
 
 export type Personality = "default" | "teacher" | "funny" | "strict" | "motivator" | "friend" | "photovideo" | "teacher_course";
-export type ExplainLevel = "child" | "student" | "expert" | null;
+export type ExplainLevel = "class1" | "class5" | "class8" | "class11" | "college" | "professional" | null;
 
 const QUICK_PROMPTS = [
   { icon: "📅", label: "Plan my day", prompt: "Help me plan my day. Ask me about my tasks, goals, and time constraints, then create a schedule." },

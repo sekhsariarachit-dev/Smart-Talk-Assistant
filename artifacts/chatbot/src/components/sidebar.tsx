@@ -20,10 +20,13 @@ const PERSONALITIES: { id: Personality; emoji: string; label: string }[] = [
   { id: "teacher_course", emoji: "🎓", label: "Courses" },
 ];
 
-const EXPLAIN_LEVELS: { id: ExplainLevel; emoji: string; label: string }[] = [
-  { id: "child", emoji: "👶", label: "ELI5" },
-  { id: "student", emoji: "📚", label: "Student" },
-  { id: "expert", emoji: "🧠", label: "Expert" },
+const CLASS_LEVELS: { id: ExplainLevel; label: string; sublabel: string }[] = [
+  { id: "class1", label: "Class 1–4", sublabel: "Primary" },
+  { id: "class5", label: "Class 5–7", sublabel: "Middle" },
+  { id: "class8", label: "Class 8–10", sublabel: "Secondary" },
+  { id: "class11", label: "Class 11–12", sublabel: "Senior" },
+  { id: "college", label: "College", sublabel: "Graduate" },
+  { id: "professional", label: "Professional", sublabel: "Expert" },
 ];
 
 const MINI_TOOLS: { emoji: string; label: string; prompt: string }[] = [
@@ -162,24 +165,25 @@ export function Sidebar({
           </div>
 
           <div className="p-3 border-b border-gray-100">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1 mb-2">Explain Level</p>
-            <div className="flex gap-1.5">
-              {EXPLAIN_LEVELS.map((l) => (
-                <button
-                  key={l.id}
-                  onClick={() => onExplainLevelChange(explainLevel === l.id ? null : l.id)}
-                  className={cn(
-                    "flex-1 flex flex-col items-center gap-0.5 py-2 px-1 rounded-xl text-xs font-medium transition-all border",
-                    explainLevel === l.id
-                      ? "bg-black text-white border-black shadow-md"
-                      : "text-gray-600 border-gray-100 hover:border-gray-300 hover:bg-gray-50"
-                  )}
-                >
-                  <span className="text-base">{l.emoji}</span>
-                  <span>{l.label}</span>
-                </button>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1 mb-2">Your Class</p>
+            <select
+              value={explainLevel || ""}
+              onChange={(e) => onExplainLevelChange((e.target.value as ExplainLevel) || null)}
+              className="w-full px-3 py-2 rounded-xl text-sm font-medium border border-gray-200 bg-white text-gray-700 focus:outline-none focus:border-black transition-all appearance-none cursor-pointer"
+            >
+              <option value="">Select your class...</option>
+              {CLASS_LEVELS.map((l) => (
+                <option key={l.id} value={l.id ?? ""}>{l.label} — {l.sublabel}</option>
               ))}
-            </div>
+            </select>
+            {explainLevel && (
+              <button
+                onClick={() => onExplainLevelChange(null)}
+                className="mt-1.5 w-full text-xs text-gray-400 hover:text-black transition-colors text-center"
+              >
+                Clear selection ✕
+              </button>
+            )}
           </div>
 
           <div className="p-3 border-b border-gray-100">

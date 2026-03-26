@@ -95,7 +95,9 @@ export const SendMessageBody = zod.object({
       "teacher_course",
     ])
     .optional(),
-  explainLevel: zod.enum(["child", "student", "expert"]).optional(),
+  explainLevel: zod
+    .enum(["class1", "class5", "class8", "class11", "college", "professional"])
+    .optional(),
   attachments: zod
     .array(
       zod.object({
