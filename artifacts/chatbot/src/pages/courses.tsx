@@ -433,17 +433,28 @@ export default function Courses() {
 
   const requestNotifications = async () => {
     if (!("Notification" in window)) {
-      alert("Your browser doesn't support notifications.");
+      alert("Your browser doesn't support notifications. Try adding this app to your home screen!");
       return;
     }
     const perm = await Notification.requestPermission();
     if (perm === "granted") {
       setNotifEnabled(true);
       localStorage.setItem(NOTIFICATION_KEY, "true");
-      new Notification("🎓 AI Learning Academy", {
-        body: "You're all set! You'll get daily reminders to keep your learning streak alive! 🔥",
-        icon: "/favicon.ico",
-      });
+      try {
+        if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.ready.then(reg => {
+            reg.showNotification("🎓 AI Learning Academy", {
+              body: "You're all set! Come back daily to keep your learning streak alive! 🔥",
+            });
+          });
+        } else {
+          new Notification("🎓 AI Learning Academy", {
+            body: "You're all set! Come back daily to keep your learning streak alive! 🔥",
+          });
+        }
+      } catch {
+        setNotifEnabled(true);
+      }
     }
   };
 
